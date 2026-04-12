@@ -1,1 +1,41 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LAA — Lecture Access Agent</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1>LAA <span class="tag">Lecture Access Agent</span></h1>
+      <div class="controls">
+        <button id="btnStart" class="btn btn-start">Начать</button>
+        <button id="btnStop" class="btn btn-stop" disabled>Остановить</button>
+        <span id="statusDot" class="dot dot-idle"></span>
+      </div>
+    </header>
 
+    <main class="main">
+      <section class="panel panel-avatar">
+        <img id="avatarImg" src="/static/avatar_placeholder.gif" alt="Sign language avatar" />
+        <p id="avatarLabel" class="avatar-label"></p>
+      </section>
+
+      <section class="panel panel-subtitles">
+        <h2>Субтитры</h2>
+        <div id="subtitleBox" class="subtitle-box"></div>
+        <div id="keywords" class="keywords"></div>
+      </section>
+    </main>
+
+    <footer class="panel panel-summary hidden" id="summaryPanel">
+      <h2>Резюме сессии</h2>
+      <p id="summaryText"></p>
+    </footer>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
