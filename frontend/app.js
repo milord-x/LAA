@@ -12,19 +12,14 @@ const summaryPanel = document.getElementById("summaryPanel");
 const summaryText = document.getElementById("summaryText");
 
 const SAMPLE_RATE = 16000;
-const CHUNK_SEC = 3;
 
 let ws = null;
 let currentSessionId = null;
 let audioCtx = null;
 let mediaStream = null;
-let processor = null;
-let pcmBuffer = [];
-let pcmSamples = 0;
-const TARGET_SAMPLES = SAMPLE_RATE * CHUNK_SEC;
+let workletNode = null;
 
 async function startSession() {
-  // Request mic first
   try {
     mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
   } catch (e) {
@@ -38,88 +33,64 @@ async function startSession() {
 
   setActive(true);
   openWS();
-  startCapture();
+  await startCapture();
 }
 
 async function stopSession() {
   stopCapture();
-
   if (ws) { ws.close(); ws = null; }
 
   const res = await fetch(`${API}/session/stop`, { method: "POST" });
   const data = await res.json();
-
   setActive(false);
 
-  if (data.session_id) {
-    await fetchSummary(data.session_id);
-  }
+  if (data.session_id) await fetchSummary(data.session_id);
 }
 
 function openWS() {
   ws = new WebSocket(WS_URL);
   ws.binaryType = "arraybuffer";
 
+  ws.onopen = () => console.log("[WS] connected");
   ws.onmessage = (event) => {
     try {
       const payload = JSON.parse(event.data);
+      console.log("[WS] subtitle:", payload.text);
       if (payload.type === "subtitle") appendSubtitle(payload);
     } catch (_) {}
   };
-
-  ws.onerror = () => setActive(false);
-  ws.onclose = () => {};
+  ws.onerror = (e) => { console.error("[WS] error", e); setActive(false); };
+  ws.onclose = (e) => console.log("[WS] closed", e.code);
 }
 
-function startCapture() {
+async function startCapture() {
   audioCtx = new AudioContext({ sampleRate: SAMPLE_RATE });
+  if (audioCtx.state === "suspended") await audioCtx.resume();
+  console.log("[Audio] state:", audioCtx.state, "rate:", audioCtx.sampleRate);
+
+  await audioCtx.audioWorklet.addModule("/static/recorder-worklet.js");
+
   const source = audioCtx.createMediaStreamSource(mediaStream);
+  workletNode = new AudioWorkletNode(audioCtx, "recorder-processor");
 
-  processor = audioCtx.createScriptProcessor(4096, 1, 1);
-  processor.onaudioprocess = (e) => {
-    const samples = e.inputBuffer.getChannelData(0); // Float32Array
-    pcmBuffer.push(new Float32Array(samples));
-    pcmSamples += samples.length;
-
-    if (pcmSamples >= TARGET_SAMPLES) {
-      flushChunk();
+  let chunkCount = 0;
+  workletNode.port.onmessage = (e) => {
+    chunkCount++;
+    console.log(`[Audio] chunk #${chunkCount} ready, bytes: ${e.data.byteLength}`);
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(e.data);
     }
   };
 
-  source.connect(processor);
-  processor.connect(audioCtx.destination);
-}
-
-function flushChunk() {
-  const merged = new Float32Array(pcmSamples);
-  let offset = 0;
-  for (const buf of pcmBuffer) {
-    merged.set(buf, offset);
-    offset += buf.length;
-  }
-  pcmBuffer = [];
-  pcmSamples = 0;
-
-  if (ws && ws.readyState === WebSocket.OPEN) {
-    ws.send(merged.buffer);
-  }
+  source.connect(workletNode);
+  workletNode.connect(audioCtx.destination);
+  console.log("[Audio] capture started");
 }
 
 function stopCapture() {
-  if (processor) {
-    processor.disconnect();
-    processor = null;
-  }
-  if (audioCtx) {
-    audioCtx.close();
-    audioCtx = null;
-  }
-  if (mediaStream) {
-    mediaStream.getTracks().forEach((t) => t.stop());
-    mediaStream = null;
-  }
-  pcmBuffer = [];
-  pcmSamples = 0;
+  if (workletNode) { workletNode.disconnect(); workletNode = null; }
+  if (audioCtx) { audioCtx.close(); audioCtx = null; }
+  if (mediaStream) { mediaStream.getTracks().forEach((t) => t.stop()); mediaStream = null; }
 }
 
 function appendSubtitle(payload) {
@@ -130,7 +101,6 @@ function appendSubtitle(payload) {
   subtitleBox.scrollTop = subtitleBox.scrollHeight;
 
   if (payload.keywords && payload.keywords.length) renderKeywords(payload.keywords);
-
   if (payload.avatar_url) {
     avatarImg.src = payload.avatar_url + "?t=" + Date.now();
     avatarLabel.textContent = payload.text.slice(0, 60);
