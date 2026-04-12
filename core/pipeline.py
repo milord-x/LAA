@@ -14,6 +14,31 @@ from processing.structurer import structure_chunk
 
 TARGET_RATE = config.SAMPLE_RATE  # 16000
 
+# RMS threshold below which audio is considered silence
+SILENCE_RMS = 0.01
+
+# Whisper hallucination patterns to discard
+_HALLUCINATIONS = {
+    "продолжение следует",
+    "субтитры сделаны",
+    "субтитры",
+    "thanks for watching",
+    "thank you for watching",
+    "subscribe",
+    "...",
+    ".",
+}
+
+
+def _is_silence(audio: np.ndarray) -> bool:
+    rms = float(np.sqrt(np.mean(audio ** 2)))
+    return rms < SILENCE_RMS
+
+
+def _is_hallucination(text: str) -> bool:
+    t = text.strip().lower().rstrip(".")
+    return t in _HALLUCINATIONS or len(t) < 2
+
 
 class Pipeline:
     def __init__(self) -> None:
@@ -36,9 +61,9 @@ class Pipeline:
         if session is None:
             return None
 
-        audio_np = np.frombuffer(raw, dtype=np.float32)
+        audio_np = np.frombuffer(raw, dtype=np.float32).copy()
 
-        if audio_np.size == 0:
+        if audio_np.size == 0 or _is_silence(audio_np):
             return None
 
         try:
@@ -47,7 +72,7 @@ class Pipeline:
             print(f"[Pipeline] ASR error: {e}")
             return None
 
-        if not chunk.text:
+        if not chunk.text or _is_hallucination(chunk.text):
             return None
 
         session.append_text(chunk.text)
