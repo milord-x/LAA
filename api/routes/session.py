@@ -19,18 +19,15 @@ async def start_session() -> SessionResponse:
         return SessionResponse(session_id=existing.id, status="already_running")
 
     session = session_manager.create()
-    pipeline.start()
+    pipeline.ensure_loaded()
     return SessionResponse(session_id=session.id, status="started")
 
 
 @router.post("/stop", response_model=SessionResponse)
 async def stop_session() -> SessionResponse:
     session = session_manager.stop_current()
-    pipeline.stop()
-
     if session is None:
         return SessionResponse(session_id="", status="no_active_session")
-
     return SessionResponse(session_id=session.id, status="stopped")
 
 
