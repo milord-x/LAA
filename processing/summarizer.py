@@ -1,41 +1,52 @@
-from openai import OpenAI
+"""
+Extractive summarizer — fully offline, no API keys required.
 
-from core.config import config
+Algorithm:
+  1. Split transcript into sentences.
+  2. Score each sentence by keyword frequency (TF-style).
+  3. Pick top-N sentences in original order.
+  4. Return structured text block.
+"""
 
-_client: OpenAI | None = None
+import re
+from processing.structurer import extract_keywords
 
 
-def _get_client() -> OpenAI:
-    global _client
-    if _client is None:
-        _client = OpenAI(api_key=config.OPENAI_API_KEY)
-    return _client
+def _split_sentences(text: str) -> list[str]:
+    parts = re.split(r"(?<=[.!?])\s+", text.strip())
+    return [s.strip() for s in parts if len(s.strip()) > 10]
 
 
-def generate_summary(transcript: str) -> str:
+def _score_sentences(sentences: list[str], keywords: list[str]) -> list[tuple[int, float]]:
+    kw_set = set(keywords)
+    scored: list[tuple[int, float]] = []
+    for idx, sentence in enumerate(sentences):
+        words = re.findall(r"\b[а-яёА-ЯЁa-zA-Z]+\b", sentence.lower())
+        hits = sum(1 for w in words if w in kw_set)
+        score = hits / max(len(words), 1)
+        scored.append((idx, score))
+    return scored
+
+
+def generate_summary(transcript: str, top_n: int = 5) -> str:
     if not transcript.strip():
         return "Транскрипт пустой."
 
-    client = _get_client()
-    response = client.chat.completions.create(
-        model="gpt-4o-mini",
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "Ты — ассистент для слабослышащих пользователей. "
-                    "Составь краткое структурированное резюме лекции или речи. "
-                    "Выдели ключевые темы, основные мысли и важные факты. "
-                    "Отвечай на русском языке."
-                ),
-            },
-            {
-                "role": "user",
-                "content": f"Транскрипт:\n{transcript}",
-            },
-        ],
-        max_tokens=600,
-        temperature=0.3,
+    sentences = _split_sentences(transcript)
+    if not sentences:
+        return transcript[:500]
+
+    keywords = extract_keywords(transcript, max_keywords=20)
+    scored = _score_sentences(sentences, keywords)
+
+    top_indices = sorted(
+        sorted(scored, key=lambda x: x[1], reverse=True)[:top_n],
+        key=lambda x: x[0],
     )
 
-    return response.choices[0].message.content.strip()
+    top_sentences = [sentences[i] for i, _ in top_indices]
+
+    kw_line = ", ".join(keywords[:8]) if keywords else "—"
+    summary_body = " ".join(top_sentences)
+
+    return f"Ключевые темы: {kw_line}.\n\n{summary_body}"

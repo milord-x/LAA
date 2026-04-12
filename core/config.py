@@ -5,7 +5,6 @@ load_dotenv()
 
 
 class Config:
-    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
     ASR_MODEL: str = os.getenv("ASR_MODEL", "large-v3-turbo")
     ASR_LANGUAGE: str = os.getenv("ASR_LANGUAGE", "ru")
     CHUNK_DURATION_SEC: int = int(os.getenv("CHUNK_DURATION_SEC", "3"))
