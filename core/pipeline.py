@@ -24,6 +24,7 @@ CHANNELS = 1
 class Pipeline:
     def __init__(self) -> None:
         self._asr = WhisperEngine()
+        self._model_loaded = False
         self._running = False
         self._thread: threading.Thread | None = None
         self._broadcast_cb: Callable[[dict], None] | None = None
@@ -32,7 +33,9 @@ class Pipeline:
         self._broadcast_cb = cb
 
     def start(self) -> None:
-        self._asr.load()
+        if not self._model_loaded:
+            self._asr.load()
+            self._model_loaded = True
         self._running = True
         self._thread = threading.Thread(target=self._capture_loop, daemon=True)
         self._thread.start()

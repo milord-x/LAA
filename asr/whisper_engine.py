@@ -14,8 +14,8 @@ class WhisperEngine(BaseASREngine):
         self._sample_rate = config.SAMPLE_RATE
 
     def load(self) -> None:
-        print(f"[ASR] Loading Whisper model: {self._model_name}")
-        self._model = whisper.load_model(self._model_name)
+        print(f"[ASR] Loading Whisper model: {self._model_name} on CPU")
+        self._model = whisper.load_model(self._model_name, device="cpu")
         print("[ASR] Model loaded.")
 
     def transcribe_chunk(self, audio: bytes) -> ASRChunk:
