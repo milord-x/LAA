@@ -77,7 +77,7 @@ def _is_silence(audio: np.ndarray) -> tuple[bool, float]:
 
 def _is_hallucination(text: str) -> bool:
     t = text.strip().lower().strip(".,!?-– …[]()\"'")
-    if len(t) < 4:
+    if len(t) < 3:
         return True
     if t in _HALLUCINATIONS_EXACT:
         return True

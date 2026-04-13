@@ -55,8 +55,6 @@ class WhisperEngine(BaseASREngine):
             language=lang,
             task="transcribe",
             condition_on_previous_text=False,
-            # Primes Whisper toward lecture/academic context, reduces filler hallucinations
-            initial_prompt="Лекция. Академическая речь на русском, казахском или английском языке.",
         )
 
         if self._use_fp16:
