@@ -185,12 +185,16 @@ body {
 .mic-select {
   background: var(--surface);
   color: var(--text);
-  border: 1px solid #ffffff18;
+  border: 1px solid #ffffff22;
   border-radius: 8px;
-  padding: 6px 10px;
+  padding: 7px 12px;
   font-size: 0.85rem;
-  max-width: 220px;
+  width: 260px;
   cursor: pointer;
+  outline: none;
+}
+.mic-select:focus {
+  border-color: var(--accent);
 }
 
 .status-msg {
