@@ -182,4 +182,10 @@ body {
   font-size: 0.95rem;
 }
 
+.status-msg {
+  font-size: 0.8rem;
+  color: var(--muted);
+  min-width: 100px;
+}
+
 .hidden { display: none !important; }

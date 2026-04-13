@@ -41,8 +41,12 @@ class KazRusEngine(BaseASREngine):
     def transcribe_chunk(self, audio: bytes) -> ASRChunk:
         if self._pipe is None:
             raise RuntimeError("Model not loaded. Call load() first.")
-
         audio_np = np.frombuffer(audio, dtype=np.int16).astype(np.float32) / 32768.0
+        return self.transcribe_raw(audio_np)
+
+    def transcribe_raw(self, audio_np: np.ndarray) -> ASRChunk:
+        if self._pipe is None:
+            raise RuntimeError("Model not loaded. Call load() first.")
 
         t0 = time.time()
         result = self._pipe({"array": audio_np, "sampling_rate": self._sample_rate})

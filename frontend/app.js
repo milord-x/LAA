@@ -11,6 +11,7 @@ const avatarImg = document.getElementById("avatarImg");
 const avatarLabel = document.getElementById("avatarLabel");
 const summaryPanel = document.getElementById("summaryPanel");
 const summaryText = document.getElementById("summaryText");
+const statusMsg = document.getElementById("statusMsg");
 
 let ws = null;
 let wsReady = false; // true only after ws.onopen fires
@@ -28,13 +29,16 @@ async function startSession() {
     return;
   }
 
+  statusMsg.textContent = "Подключение...";
   const res = await fetch(`${API}/session/start`, { method: "POST" });
   const data = await res.json();
   currentSessionId = data.session_id;
 
   setActive(true);
+  statusMsg.textContent = "Открытие канала...";
   // Open WS first, capture starts only after socket is open
   await openWSAndWait();
+  statusMsg.textContent = "Запись";
   await startCapture();
 }
 
@@ -42,6 +46,7 @@ async function stopSession() {
   stopCapture();
   if (ws) { ws.close(); ws = null; }
   wsReady = false;
+  statusMsg.textContent = "Генерация резюме...";
 
   const res = await fetch(`${API}/session/stop`, { method: "POST" });
   const data = await res.json();
@@ -178,7 +183,10 @@ function setActive(active) {
   btnStart.disabled = active;
   btnStop.disabled = !active;
   statusDot.className = active ? "dot dot-active" : "dot dot-idle";
-  if (!active) summaryPanel.classList.add("hidden");
+  if (!active) {
+    summaryPanel.classList.add("hidden");
+    statusMsg.textContent = "";
+  }
 }
 
 btnStart.addEventListener("click", startSession);

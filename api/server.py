@@ -14,6 +14,12 @@ from core.pipeline import pipeline
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Load ASR model at startup so /session/start responds instantly
+    import asyncio
+    loop = asyncio.get_event_loop()
+    print("[Server] Pre-loading ASR model...")
+    await loop.run_in_executor(None, pipeline.ensure_loaded)
+    print("[Server] ASR model ready.")
     yield
 
 

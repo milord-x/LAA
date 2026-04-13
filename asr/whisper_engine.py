@@ -30,6 +30,9 @@ class WhisperEngine(BaseASREngine):
             audio_np,
             language=self._language,
             fp16=False,
+            task="transcribe",
+            condition_on_previous_text=False,  # prevents hallucination loops
+            no_speech_threshold=0.4,
         )
         t1 = time.time()
 

@@ -1,7 +1,6 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from core.pipeline import pipeline
 from core.session import session_manager
 
 router = APIRouter(prefix="/session", tags=["session"])
@@ -19,7 +18,6 @@ async def start_session() -> SessionResponse:
         return SessionResponse(session_id=existing.id, status="already_running")
 
     session = session_manager.create()
-    pipeline.ensure_loaded()
     return SessionResponse(session_id=session.id, status="started")
 
 
