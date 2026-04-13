@@ -13,6 +13,7 @@ const summaryPanel = document.getElementById("summaryPanel");
 const summaryText = document.getElementById("summaryText");
 const statusMsg = document.getElementById("statusMsg");
 const micSelect = document.getElementById("micSelect");
+const langBtns = document.querySelectorAll(".lang-btn");
 
 let ws = null;
 let wsReady = false; // true only after ws.onopen fires
@@ -216,5 +217,31 @@ async function fillMicSelect() {
 
 // Try to fill on load (labels may be empty without permission — that's OK)
 fillMicSelect().catch(() => {});
+
+// Language switcher
+langBtns.forEach(btn => {
+  btn.addEventListener("click", async () => {
+    const mode = btn.dataset.mode;
+    langBtns.forEach(b => b.classList.remove("active", "loading"));
+    btn.classList.add("loading");
+    try {
+      const res = await fetch(`${API}/session/mode/${mode}`, { method: "POST" });
+      if (res.ok) {
+        langBtns.forEach(b => b.classList.remove("active", "loading"));
+        btn.classList.add("active");
+        console.log("[Lang] switched to", mode);
+      }
+    } catch (e) {
+      console.error("[Lang] switch failed:", e);
+      btn.classList.remove("loading");
+    }
+  });
+});
+
+// Load current mode from server on page load
+fetch(`${API}/session/mode`).then(r => r.json()).then(d => {
+  langBtns.forEach(b => b.classList.toggle("active", b.dataset.mode === d.mode));
+}).catch(() => {});
+
 btnStart.addEventListener("click", startSession);
 btnStop.addEventListener("click", stopSession);
