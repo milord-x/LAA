@@ -12,6 +12,7 @@ const avatarLabel = document.getElementById("avatarLabel");
 const summaryPanel = document.getElementById("summaryPanel");
 const summaryText = document.getElementById("summaryText");
 const statusMsg = document.getElementById("statusMsg");
+const micSelect = document.getElementById("micSelect");
 
 let ws = null;
 let wsReady = false; // true only after ws.onopen fires
@@ -23,7 +24,12 @@ let actualSampleRate = null;
 
 async function startSession() {
   try {
-    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    const deviceId = micSelect.value;
+    const audioConstraints = deviceId
+      ? { deviceId: { exact: deviceId } }
+      : true;
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints, video: false });
+    console.log("[Mic] using device:", micSelect.options[micSelect.selectedIndex]?.textContent);
   } catch (e) {
     alert("Нет доступа к микрофону: " + e.message);
     return;
@@ -189,5 +195,26 @@ function setActive(active) {
   }
 }
 
+// Populate mic list on load
+async function loadMicList() {
+  try {
+    // Request permission first so labels are visible
+    await navigator.mediaDevices.getUserMedia({ audio: true }).then(s => s.getTracks().forEach(t => t.stop()));
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const mics = devices.filter(d => d.kind === "audioinput");
+    micSelect.innerHTML = "";
+    mics.forEach(d => {
+      const opt = document.createElement("option");
+      opt.value = d.deviceId;
+      opt.textContent = d.label || `Микрофон ${d.deviceId.slice(0, 6)}`;
+      micSelect.appendChild(opt);
+    });
+    console.log("[Mic] found", mics.length, "devices");
+  } catch (e) {
+    console.warn("[Mic] cannot enumerate:", e.message);
+  }
+}
+
+loadMicList();
 btnStart.addEventListener("click", startSession);
 btnStop.addEventListener("click", stopSession);
