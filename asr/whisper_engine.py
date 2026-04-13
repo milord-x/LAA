@@ -31,8 +31,8 @@ class WhisperEngine(BaseASREngine):
             language=self._language,
             fp16=False,
             task="transcribe",
-            condition_on_previous_text=False,  # prevents hallucination loops
-            no_speech_threshold=0.4,
+            condition_on_previous_text=False,  # prevents hallucination carry-over between chunks
+            # no_speech_threshold default 0.6 is fine — our RMS gate handles silence upstream
         )
         t1 = time.time()
 

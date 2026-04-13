@@ -115,24 +115,24 @@ async function startCapture() {
         return;
       }
 
-      // Send a 5-byte header: 1 byte magic (0xAA) + 4 bytes uint32 LE sample rate
-      // followed by raw float32 PCM samples.
-      // Backend uses this to detect and resample if rate != 16000.
-      const header = new ArrayBuffer(5);
+      // 8-byte header: magic uint32 0x4C414100 ("LAA\0") + uint32 LE sample rate
+      // This magic cannot appear as a valid IEEE-754 float (it's a denormal near-zero NaN cluster),
+      // so it won't collide with real PCM data.
+      const header = new ArrayBuffer(8);
       const hView = new DataView(header);
-      hView.setUint8(0, 0xAA);
-      hView.setUint32(1, msg.sampleRate, true); // little-endian
+      hView.setUint32(0, 0x4C414100, false); // big-endian magic "LAA\0"
+      hView.setUint32(4, msg.sampleRate, true); // little-endian sample rate
 
-      const combined = new Uint8Array(5 + byteLen);
+      const combined = new Uint8Array(8 + byteLen);
       combined.set(new Uint8Array(header), 0);
-      combined.set(new Uint8Array(msg.buffer), 5);
+      combined.set(new Uint8Array(msg.buffer), 8);
 
       ws.send(combined.buffer);
     }
   };
 
+  // Do NOT connect workletNode to destination — we only want to capture, not play back
   source.connect(workletNode);
-  workletNode.connect(audioCtx.destination);
   console.log("[Audio] capture started");
 }
 
