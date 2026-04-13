@@ -31,14 +31,22 @@ SILENCE_RMS = float(__import__("os").getenv("SILENCE_RMS", "0.002"))
 HEADER_MAGIC = 0x4C414100  # "LAA\0" as uint32 big-endian
 HEADER_SIZE = 8             # 4 bytes magic + 4 bytes uint32 sample rate
 
-# Whisper hallucinations — single-word/short outputs Whisper emits for silence/noise
-_HALLUCINATIONS = {
+# Exact-match hallucinations (after stripping punctuation/spaces)
+_HALLUCINATIONS_EXACT = {
     "продолжение следует", "субтитры сделаны", "субтитры",
     "thanks for watching", "thank you for watching", "subscribe",
-    "...", ".", ",", "-", "–",
     "да", "нет", "ок", "окей", "хорошо", "ладно",
     "yes", "no", "ok", "okay", "hmm", "uh", "um",
 }
+
+# Substring hallucinations — if any of these appear anywhere in the text
+_HALLUCINATIONS_SUBSTR = [
+    "субтитры создавал",
+    "субтитры сделал",
+    "продолжение следует",
+    "dimatzrok", "dimatorzok",
+    "редактор субтитров",
+]
 
 
 def _parse_frame(raw: bytes) -> tuple[np.ndarray, int]:
@@ -82,8 +90,15 @@ def _is_silence(audio: np.ndarray) -> tuple[bool, float]:
 
 
 def _is_hallucination(text: str) -> bool:
-    t = text.strip().lower().strip(".,!?-– ")
-    return t in _HALLUCINATIONS or len(t) < 3
+    t = text.strip().lower().strip(".,!?-– …")
+    if len(t) < 3:
+        return True
+    if t in _HALLUCINATIONS_EXACT:
+        return True
+    for substr in _HALLUCINATIONS_SUBSTR:
+        if substr in t:
+            return True
+    return False
 
 
 class Pipeline:
@@ -124,7 +139,7 @@ class Pipeline:
             print("[Pipeline] chunk dropped — silence")
             return None
 
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         t0 = time.time()
         try:
             chunk = await loop.run_in_executor(None, self._asr.transcribe_raw, audio_np)

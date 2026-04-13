@@ -2,7 +2,6 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, WebSocket
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
@@ -14,23 +13,17 @@ from core.pipeline import pipeline
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Load ASR model at startup so /session/start responds instantly
     import asyncio
-    loop = asyncio.get_event_loop()
     print("[Server] Pre-loading ASR model...")
-    await loop.run_in_executor(None, pipeline.ensure_loaded)
+    await asyncio.get_event_loop().run_in_executor(None, pipeline.ensure_loaded)
     print("[Server] ASR model ready.")
     yield
 
 
 app = FastAPI(title="LAA — Lecture Access Agent", lifespan=lifespan)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# NOTE: CORSMiddleware is intentionally omitted — it breaks WebSocket in Starlette 1.0.
+# Frontend is served from the same origin so CORS is not needed.
 
 app.include_router(session_routes.router)
 app.include_router(summary_routes.router)
