@@ -48,24 +48,23 @@ class WhisperEngine(BaseASREngine):
 
         t0 = time.time()
 
+        # language=None means auto-detect per chunk (handles ru/kz/en mixed speech)
+        lang = self._language if self._language else None
+
+        kwargs = dict(
+            language=lang,
+            task="transcribe",
+            condition_on_previous_text=False,
+            # Primes Whisper toward lecture/academic context, reduces filler hallucinations
+            initial_prompt="Лекция. Академическая речь на русском, казахском или английском языке.",
+        )
+
         if self._use_fp16:
             import torch
             with torch.amp.autocast("cuda"):
-                result = self._model.transcribe(
-                    audio_np,
-                    language=self._language,
-                    fp16=True,
-                    task="transcribe",
-                    condition_on_previous_text=False,
-                )
+                result = self._model.transcribe(audio_np, fp16=True, **kwargs)
         else:
-            result = self._model.transcribe(
-                audio_np,
-                language=self._language,
-                fp16=False,
-                task="transcribe",
-                condition_on_previous_text=False,
-            )
+            result = self._model.transcribe(audio_np, fp16=False, **kwargs)
 
         t1 = time.time()
         text = result.get("text", "").strip()
