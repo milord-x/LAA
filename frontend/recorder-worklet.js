@@ -1,9 +1,14 @@
 class RecorderProcessor extends AudioWorkletProcessor {
-  constructor() {
+  constructor(options) {
     super();
+    // sampleRate is the actual rate the AudioContext is running at (may differ from requested 16000)
+    const actualRate = sampleRate; // global in AudioWorkletGlobalScope
     this._buffer = [];
     this._samples = 0;
-    this._target = 16000 * 3; // 3 sec at 16kHz
+    this._target = actualRate * 3; // 3 sec of actual samples
+    this._actualRate = actualRate;
+    // Send actual rate to main thread so it can be forwarded to backend
+    this.port.postMessage({ type: "init", sampleRate: actualRate });
   }
 
   process(inputs) {
@@ -23,7 +28,8 @@ class RecorderProcessor extends AudioWorkletProcessor {
       }
       this._buffer = [];
       this._samples = 0;
-      this.port.postMessage(merged.buffer, [merged.buffer]);
+      // Transfer buffer without copy
+      this.port.postMessage({ type: "chunk", buffer: merged.buffer, sampleRate: this._actualRate }, [merged.buffer]);
     }
 
     return true;

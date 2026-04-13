@@ -1,5 +1,6 @@
 const API = "";
-const WS_URL = `ws://${location.host}/ws/subtitles`;
+// Use wss:// on HTTPS pages to avoid mixed-content block
+const WS_URL = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/subtitles`;
 
 const btnStart = document.getElementById("btnStart");
 const btnStop = document.getElementById("btnStop");
@@ -11,13 +12,13 @@ const avatarLabel = document.getElementById("avatarLabel");
 const summaryPanel = document.getElementById("summaryPanel");
 const summaryText = document.getElementById("summaryText");
 
-const SAMPLE_RATE = 16000;
-
 let ws = null;
+let wsReady = false; // true only after ws.onopen fires
 let currentSessionId = null;
 let audioCtx = null;
 let mediaStream = null;
 let workletNode = null;
+let actualSampleRate = null;
 
 async function startSession() {
   try {
@@ -32,13 +33,15 @@ async function startSession() {
   currentSessionId = data.session_id;
 
   setActive(true);
-  openWS();
+  // Open WS first, capture starts only after socket is open
+  await openWSAndWait();
   await startCapture();
 }
 
 async function stopSession() {
   stopCapture();
   if (ws) { ws.close(); ws = null; }
+  wsReady = false;
 
   const res = await fetch(`${API}/session/stop`, { method: "POST" });
   const data = await res.json();
@@ -47,26 +50,40 @@ async function stopSession() {
   if (data.session_id) await fetchSummary(data.session_id);
 }
 
-function openWS() {
-  ws = new WebSocket(WS_URL);
-  ws.binaryType = "arraybuffer";
+function openWSAndWait() {
+  return new Promise((resolve, reject) => {
+    ws = new WebSocket(WS_URL);
+    ws.binaryType = "arraybuffer";
 
-  ws.onopen = () => console.log("[WS] connected");
-  ws.onmessage = (event) => {
-    try {
-      const payload = JSON.parse(event.data);
-      console.log("[WS] subtitle:", payload.text);
-      if (payload.type === "subtitle") appendSubtitle(payload);
-    } catch (_) {}
-  };
-  ws.onerror = (e) => { console.error("[WS] error", e); setActive(false); };
-  ws.onclose = (e) => console.log("[WS] closed", e.code);
+    ws.onopen = () => {
+      console.log("[WS] connected");
+      wsReady = true;
+      resolve();
+    };
+    ws.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        console.log("[WS] subtitle:", payload.text);
+        if (payload.type === "subtitle") appendSubtitle(payload);
+      } catch (_) {}
+    };
+    ws.onerror = (e) => {
+      console.error("[WS] error", e);
+      setActive(false);
+      reject(e);
+    };
+    ws.onclose = (e) => {
+      console.log("[WS] closed", e.code);
+      wsReady = false;
+    };
+  });
 }
 
 async function startCapture() {
-  audioCtx = new AudioContext({ sampleRate: SAMPLE_RATE });
+  // Request 16000 Hz but the browser may return a different rate — worklet reports actual
+  audioCtx = new AudioContext({ sampleRate: 16000 });
   if (audioCtx.state === "suspended") await audioCtx.resume();
-  console.log("[Audio] state:", audioCtx.state, "rate:", audioCtx.sampleRate);
+  console.log("[Audio] AudioContext state:", audioCtx.state, "requested rate: 16000, actual:", audioCtx.sampleRate);
 
   await audioCtx.audioWorklet.addModule("/static/recorder-worklet.js");
 
@@ -75,10 +92,37 @@ async function startCapture() {
 
   let chunkCount = 0;
   workletNode.port.onmessage = (e) => {
-    chunkCount++;
-    console.log(`[Audio] chunk #${chunkCount} ready, bytes: ${e.data.byteLength}`);
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(e.data);
+    const msg = e.data;
+
+    if (msg.type === "init") {
+      actualSampleRate = msg.sampleRate;
+      console.log("[Audio] actual sample rate reported by worklet:", actualSampleRate);
+      return;
+    }
+
+    if (msg.type === "chunk") {
+      chunkCount++;
+      const byteLen = msg.buffer.byteLength;
+      console.log(`[Audio] chunk #${chunkCount} bytes=${byteLen} sampleRate=${msg.sampleRate}`);
+
+      if (!wsReady) {
+        console.warn("[Audio] WS not ready, dropping chunk");
+        return;
+      }
+
+      // Send a 5-byte header: 1 byte magic (0xAA) + 4 bytes uint32 LE sample rate
+      // followed by raw float32 PCM samples.
+      // Backend uses this to detect and resample if rate != 16000.
+      const header = new ArrayBuffer(5);
+      const hView = new DataView(header);
+      hView.setUint8(0, 0xAA);
+      hView.setUint32(1, msg.sampleRate, true); // little-endian
+
+      const combined = new Uint8Array(5 + byteLen);
+      combined.set(new Uint8Array(header), 0);
+      combined.set(new Uint8Array(msg.buffer), 5);
+
+      ws.send(combined.buffer);
     }
   };
 
