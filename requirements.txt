@@ -7,3 +7,4 @@ torch>=2.2.0
 torchaudio>=2.2.0
 transformers>=4.40.0
 numpy>=1.26.0
+argostranslate>=1.9.0

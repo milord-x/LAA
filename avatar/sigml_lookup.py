@@ -455,18 +455,155 @@ _SIGN_MAP: dict[str, str] = {
 
 _POOL = [k for k, v in _SIGN_MAP.items() if v.startswith("<hns_sign")]
 
+# RU/KZ word → EN key translation table (lecture/everyday vocabulary)
+_RU_TO_EN: dict[str, str] = {
+    # Базовые
+    "и": "and", "в": "in", "на": "on", "с": "with", "по": "about",
+    "это": "this", "не": "not", "то": "that", "так": "so", "как": "how",
+    "что": "what", "где": "where", "когда": "when", "почему": "why",
+    "кто": "who", "его": "him", "её": "her", "они": "we", "мы": "we",
+    "вы": "you", "я": "me", "он": "he", "она": "she",
+    # Глаголы
+    "говорить": "speak", "говорит": "speak", "говорим": "speak",
+    "сказать": "say", "сказал": "say",
+    "делать": "do", "делает": "do", "делаем": "do",
+    "идти": "go", "идёт": "go", "идём": "go",
+    "прийти": "come", "приходить": "come",
+    "есть": "eat", "пить": "drink",
+    "спать": "sleep", "думать": "think", "думает": "think",
+    "знать": "know", "знает": "know", "знаем": "know",
+    "понимать": "understand", "понимает": "understand",
+    "читать": "read", "читает": "read",
+    "писать": "write", "пишет": "write",
+    "учить": "learn", "учится": "learn", "учиться": "learn",
+    "учить": "teach", "преподавать": "teach",
+    "работать": "work", "работает": "work",
+    "помочь": "help", "помогать": "help",
+    "открыть": "open", "закрыть": "close",
+    "начать": "begin", "начинать": "begin", "начало": "begin",
+    "закончить": "finish", "конец": "finish",
+    "видеть": "see", "смотреть": "see",
+    "слышать": "hear", "слушать": "hear",
+    "давать": "give", "дать": "give",
+    "брать": "take", "взять": "take",
+    "приходить": "come", "уходить": "go",
+    "отвечать": "answer", "ответить": "answer",
+    "спрашивать": "question", "спросить": "question",
+    "объяснять": "explain", "объяснить": "explain",
+    "показывать": "show", "показать": "show",
+    "искать": "search", "найти": "find",
+    "строить": "build", "создавать": "build",
+    "использовать": "use", "применять": "use",
+    "решать": "solve", "решить": "solve",
+    "обсуждать": "discuss", "обсудить": "discuss",
+    "развивать": "develop", "изменять": "change",
+    "получать": "receive", "получить": "receive",
+    "отправить": "send", "посылать": "send",
+    "звонить": "call", "позвонить": "call",
+    "играть": "play", "танцевать": "dance",
+    "плакать": "cry", "смеяться": "laugh",
+    "любить": "love", "нравиться": "like",
+    "бояться": "fear", "помнить": "remind",
+    "забывать": "forget", "повторять": "repeat",
+    "считать": "count", "делить": "divide",
+    # Существительные
+    "привет": "hello", "здравствуйте": "hello", "пока": "bye",
+    "да": "yes", "нет": "no",
+    "хорошо": "good", "плохо": "bad",
+    "дом": "home", "школа": "school", "класс": "class",
+    "учитель": "teach", "студент": "student", "ученик": "student",
+    "книга": "book", "тетрадь": "notebook", "ручка": "pen",
+    "вопрос": "question", "ответ": "answer", "задача": "problem",
+    "урок": "education", "лекция": "education", "занятие": "education",
+    "тема": "about", "предмет": "science", "курс": "education",
+    "человек": "person", "люди": "person", "мужчина": "man",
+    "женщина": "woman", "ребёнок": "child", "дети": "child",
+    "мать": "mother", "отец": "father", "брат": "brother",
+    "сестра": "sister", "семья": "family", "друг": "friend",
+    "деньги": "money", "время": "time", "место": "place",
+    "вода": "water", "еда": "food", "хлеб": "bread",
+    "дорога": "road", "машина": "car", "автобус": "bus",
+    "город": "area", "страна": "area", "мир": "world",
+    "язык": "language", "слово": "sentence", "текст": "sentence",
+    "информация": "internet", "данные": "internet", "система": "science",
+    "программа": "plan", "проект": "plan", "работа": "work",
+    "результат": "result", "ошибка": "mistake", "проблема": "problem",
+    "идея": "idea", "метод": "method", "способ": "method",
+    "цель": "plan", "задание": "exercise", "пример": "example",
+    "правило": "procedure", "закон": "procedure",
+    "утро": "morning", "вечер": "evening", "день": "day", "ночь": "night",
+    "сегодня": "today", "завтра": "tomorrow", "вчера": "yesterday",
+    "год": "year", "месяц": "month", "неделя": "week",
+    "час": "hour", "минута": "minute", "сейчас": "now",
+    "красный": "red", "синий": "blue", "зелёный": "green",
+    "белый": "white", "чёрный": "black", "жёлтый": "yellow",
+    "большой": "big", "маленький": "small", "новый": "new",
+    "старый": "old", "хороший": "good", "плохой": "bad",
+    "важный": "important", "интересный": "interesting",
+    "трудный": "difficult", "лёгкий": "easy", "быстрый": "quick",
+    "медленный": "slow", "тихий": "quiet", "громкий": "loud",
+    "первый": "first", "последний": "last", "следующий": "next",
+    "много": "many", "мало": "few", "все": "all", "каждый": "every",
+    "имя": "name", "номер": "number", "список": "list",
+    "математика": "science", "физика": "science", "химия": "science",
+    "история": "education", "география": "area", "биология": "science",
+    "компьютер": "computer", "телефон": "phone", "интернет": "internet",
+    "доктор": "doctor", "больница": "clinic", "лекарство": "medicine",
+    # Казахский базовый
+    "сәлем": "hello", "жақсы": "good", "иә": "yes", "жоқ": "no",
+    "рақмет": "thank", "кешіріңіз": "sorry", "өтінеміз": "please",
+    "бар": "there", "жоқ": "no", "болады": "yes", "болмайды": "no",
+    "мен": "me", "сен": "you", "ол": "he", "біз": "we",
+    "үй": "home", "мектеп": "school", "сынып": "class",
+    "оқу": "read", "жазу": "write", "білу": "know",
+    "келу": "come", "кету": "go", "беру": "give", "алу": "take",
+    "жеу": "eat", "ішу": "drink", "ұйықтау": "sleep",
+    "ойлау": "think", "сөйлеу": "speak", "тыңдау": "hear",
+}
+
 
 def text_to_sigml(text: str) -> str:
-    """Convert text segment to SiGML. Matches keywords; falls back to pool."""
-    import hashlib
+    """
+    Convert text segment to SiGML.
+    1. Try direct EN keyword match
+    2. Try RU/KZ→EN translation via built-in dict
+    3. Try argostranslate if available
+    4. Fall back to deterministic pool selection
+    """
     words = text.lower().split()
     signs: list[str] = []
+
     for word in words:
         clean = word.strip(".,!?;:\"'()-…")
+        # Direct match
         entry = _SIGN_MAP.get(clean)
         if entry and entry.startswith("<hns_sign"):
             signs.append(entry)
+            continue
+        # RU/KZ → EN translation
+        en_word = _RU_TO_EN.get(clean)
+        if en_word:
+            entry = _SIGN_MAP.get(en_word)
+            if entry and entry.startswith("<hns_sign"):
+                signs.append(entry)
+
+    # If nothing matched, try argostranslate on full text
+    if not signs:
+        try:
+            from avatar.translator import translate_to_en
+            en_text = translate_to_en(text)
+            if en_text != text:
+                for word in en_text.lower().split():
+                    clean = word.strip(".,!?;:\"'()-…")
+                    entry = _SIGN_MAP.get(clean)
+                    if entry and entry.startswith("<hns_sign"):
+                        signs.append(entry)
+        except Exception:
+            pass
+
+    # Final fallback: deterministic from pool
     if not signs:
         idx = int(hashlib.md5(text.encode()).hexdigest(), 16) % len(_POOL)
         signs.append(_SIGN_MAP[_POOL[idx]])
+
     return f'<sigml>{"".join(signs)}</sigml>'

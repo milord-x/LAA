@@ -17,6 +17,12 @@ async def lifespan(app: FastAPI):
     print("[Server] Pre-loading ASR model...")
     await asyncio.get_event_loop().run_in_executor(None, pipeline.ensure_loaded)
     print("[Server] ASR model ready.")
+    # Preload RU->EN translator in background (downloads ~50MB on first run)
+    try:
+        from avatar.translator import preload_async
+        preload_async()
+    except Exception:
+        pass
     yield
 
 
