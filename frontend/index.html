@@ -12,6 +12,17 @@
 </head>
 <body>
 
+  <!-- ── Ambient background layers ─────────────────────────────────────── -->
+  <div class="bg-ambient" aria-hidden="true">
+    <div class="bg-orb bg-orb-1"></div>
+    <div class="bg-orb bg-orb-2"></div>
+    <div class="bg-orb bg-orb-3"></div>
+    <div class="bg-grid"></div>
+    <div class="bg-noise"></div>
+    <div class="bg-arc-1"></div>
+    <div class="bg-arc-2"></div>
+  </div>
+
   <!-- ── SETTINGS PANEL ──────────────────────────────────────────────────── -->
   <div id="settingsOverlay" class="settings-overlay hidden" onclick="closeSettings()"></div>
   <aside id="settingsPanel" class="settings-panel hidden">
@@ -69,22 +80,103 @@
   <!-- ══════════════════════════════════════════════════════════════════════ -->
   <section class="screen screen-home active" id="screenHome">
     <div class="home-container">
-      <div class="home-badge">AI-ассистент для слабослышащих</div>
-      <h1 class="home-title">Речь становится<br><span class="home-title-accent">доступной</span></h1>
-      <p class="home-desc">
-        LAA в реальном времени распознаёт речь на лекциях и публичных мероприятиях,
-        переводит её в субтитры и язык жестов, формирует структурированное резюме —
-        чтобы ни одно слово не было потеряно.
-      </p>
-      <div class="home-actions">
-        <button class="btn-hero" id="btnStartHero" onclick="startHeroSession()">
-          <span class="btn-hero-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-          </span>
-          Начать сессию
-        </button>
-        <button class="btn-ghost" onclick="navigateTo('history')">Посмотреть историю</button>
+
+      <!-- Hero two-column layout -->
+      <div class="home-hero">
+        <div class="home-hero-left">
+          <div class="home-badge">
+            <span class="home-badge-dot"></span>
+            AI-ассистент доступности речи
+          </div>
+          <h1 class="home-title">Речь становится<br><span class="home-title-accent">доступной</span></h1>
+          <p class="home-desc">
+            LAA распознаёт речь в реальном времени, переводит её в субтитры и язык жестов,
+            формирует структурированное резюме лекций — чтобы ни одно слово не было потеряно.
+          </p>
+          <div class="home-actions">
+            <button class="btn-hero" id="btnStartHero" onclick="startHeroSession()">
+              <span class="btn-hero-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+              </span>
+              <span>Начать сессию</span>
+              <span class="btn-hero-shine"></span>
+            </button>
+            <button class="btn-ghost" onclick="navigateTo('history')">
+              История сессий
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+
+          <div class="home-metrics">
+            <div class="metric">
+              <span class="metric-value">3</span>
+              <span class="metric-label">языка</span>
+            </div>
+            <div class="metric-sep"></div>
+            <div class="metric">
+              <span class="metric-value">&lt;2s</span>
+              <span class="metric-label">задержка</span>
+            </div>
+            <div class="metric-sep"></div>
+            <div class="metric">
+              <span class="metric-value">374</span>
+              <span class="metric-label">жестов</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Hero visual mockup -->
+        <div class="home-hero-visual" aria-hidden="true">
+          <div class="hero-mockup">
+            <div class="hero-mockup-chrome">
+              <span class="mockup-dot" style="background:#ff6b6b"></span>
+              <span class="mockup-dot" style="background:#ffd93d"></span>
+              <span class="mockup-dot" style="background:#6bcb77"></span>
+              <span class="mockup-url">laa.local · live</span>
+              <span class="mockup-live-pill">
+                <span class="mockup-live-dot"></span>REC
+              </span>
+            </div>
+            <div class="hero-mockup-body">
+              <div class="hmb-avatar-col">
+                <div class="hmb-avatar-frame">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="1.3"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+                <div class="hmb-avatar-label">Жест·Аватар</div>
+              </div>
+              <div class="hmb-subtitles-col">
+                <div class="hmb-sub-header">
+                  <span class="hmb-sub-icon">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  </span>
+                  Live-субтитры
+                </div>
+                <div class="hmb-chunks">
+                  <div class="hmb-chunk hmb-chunk-old">...нейронные сети основаны на принципе</div>
+                  <div class="hmb-chunk hmb-chunk-old">многоуровневого представления данных</div>
+                  <div class="hmb-chunk hmb-chunk-live">каждый слой извлекает признаки высшего уровня</div>
+                </div>
+                <div class="hmb-keywords">
+                  <span class="hmb-kw">нейросети</span>
+                  <span class="hmb-kw">признаки</span>
+                  <span class="hmb-kw">градиент</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Decorative floating chips -->
+          <div class="hero-chip hero-chip-1">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
+            RU распознано
+          </div>
+          <div class="hero-chip hero-chip-2">
+            <span class="hero-chip-dot"></span>
+            Аватар синхронизирован
+          </div>
+        </div>
       </div>
+
+      <!-- Feature cards -->
       <div class="home-features">
         <div class="feature-card">
           <div class="feature-icon">
@@ -123,40 +215,62 @@
   <section class="screen screen-subtitles" id="screenSubtitles">
     <div class="subtitles-layout">
 
-      <!-- Avatar area (large, centered) -->
+      <!-- Avatar stage (large, centered, framed) -->
       <div class="avatar-area" id="avatarArea">
         <div class="avatar-live-badge" id="avatarLiveBadge">
-          <span class="live-dot"></span> Запись
+          <span class="eq">
+            <span></span><span></span><span></span><span></span>
+          </span>
+          <span class="live-label">Сессия не активна</span>
         </div>
-        <div class="avatar-frame">
-          <div class="CWASAAvatar av0" id="cwasaPanel"></div>
+        <div class="avatar-corner-tag">Жестовый аватар</div>
+        <div class="avatar-stage">
+          <div class="avatar-glow"></div>
+          <div class="avatar-frame">
+            <div class="CWASAAvatar av0" id="cwasaPanel"></div>
+          </div>
         </div>
         <p id="avatarLabel" class="avatar-caption"></p>
       </div>
 
-      <!-- Subtitles block -->
+      <!-- Subtitles panel -->
       <div class="subtitles-area">
         <div class="subtitles-header">
-          <span class="subtitles-label">Субтитры</span>
+          <div class="subtitles-header-left">
+            <span class="subtitles-label">
+              <span class="subtitles-label-icon">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </span>
+              Live-субтитры
+            </span>
+          </div>
           <div id="keywords" class="keywords"></div>
         </div>
         <div id="subtitleBox" class="subtitle-box">
           <div class="subtitle-empty" id="subtitleEmpty">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-            <span>Нажмите «Начать» чтобы запустить распознавание речи</span>
+            <div class="empty-illustration">
+              <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            </div>
+            <span class="empty-title">Готов к записи</span>
+            <span class="empty-sub">Нажмите «Начать» — система будет распознавать речь и показывать её в реальном времени</span>
           </div>
         </div>
 
-        <!-- Session controls inside subtitles screen -->
+        <!-- Session controls -->
         <div class="session-controls">
           <button id="btnStart" class="btn-session-start" onclick="startSession()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
-            Начать
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            Начать запись
           </button>
           <button id="btnStop" class="btn-session-stop" disabled onclick="stopSession()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12"/></svg>
-            Стоп
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+            Остановить
           </button>
+          <div class="session-spacer"></div>
+          <div class="session-meta" id="sessionMeta">
+            <span class="session-meta-dot"></span>
+            <span id="sessionMetaText">Режим: Авто</span>
+          </div>
         </div>
       </div>
     </div>
@@ -170,17 +284,30 @@
 
       <div class="summary-main">
         <div class="summary-header-block">
+          <div class="summary-eyebrow">
+            <span class="eyebrow-mark">◆</span> AI Workspace
+          </div>
           <h2 class="summary-title">Резюме сессии</h2>
-          <span class="summary-subtitle">Ключевые темы и структура лекции</span>
+          <span class="summary-subtitle">Автоматически извлечённые ключевые темы, структура и смысловые фрагменты лекции</span>
         </div>
 
         <div id="summaryPanel" class="summary-content">
           <div class="summary-empty" id="summaryEmpty">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.25"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-            <p>Резюме появится после завершения сессии</p>
-            <button class="btn-outline-sm" onclick="navigateTo('subtitles')">Начать сессию</button>
+            <div class="summary-empty-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            </div>
+            <p class="summary-empty-title">Здесь появится резюме</p>
+            <p class="summary-empty-sub">Запустите сессию — LAA соберёт ключевые темы и структурирует речь автоматически</p>
+            <button class="btn-outline-sm" onclick="navigateTo('subtitles')">
+              Начать сессию
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            </button>
           </div>
           <div id="summaryTextBlock" class="hidden">
+            <div class="summary-section-tag">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+              Структурированное резюме
+            </div>
             <p id="summaryText" class="summary-text"></p>
           </div>
         </div>
@@ -188,23 +315,32 @@
         <!-- Live transcript preview during session -->
         <div class="summary-live-block" id="summaryLiveBlock">
           <div class="live-header">
-            <span class="live-dot-sm"></span>
-            <span>Живая запись</span>
+            <span class="live-header-left">
+              <span class="live-dot-sm"></span>
+              Живая запись
+            </span>
+            <span class="live-header-right">обновляется каждые 3 сек</span>
           </div>
-          <div id="summaryLiveText" class="summary-live-text"></div>
+          <div id="summaryLiveText" class="summary-live-text">Ожидание данных...</div>
         </div>
       </div>
 
-      <!-- Small avatar on the right -->
-      <div class="summary-avatar-panel">
-        <div class="summary-avatar-frame">
-          <div class="summary-avatar-placeholder">
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.3"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <!-- Sticky avatar sidebar -->
+      <aside class="summary-avatar-panel">
+        <div class="summary-avatar-inner">
+          <div class="summary-avatar-frame">
+            <div class="summary-avatar-placeholder">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </div>
           </div>
+          <p class="summary-avatar-label">Жестовый аватар</p>
+          <div class="summary-avatar-hint">Активен на экране субтитров во время сессии</div>
+          <button class="summary-avatar-cta" onclick="navigateTo('subtitles')">
+            Открыть субтитры
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+          </button>
         </div>
-        <p class="summary-avatar-label">Аватар жестов</p>
-        <div class="summary-avatar-hint">Активен на экране субтитров</div>
-      </div>
+      </aside>
     </div>
   </section>
 
@@ -214,82 +350,115 @@
   <section class="screen screen-history" id="screenHistory">
     <div class="history-container">
       <div class="history-header">
-        <h2 class="history-title">История сессий</h2>
-        <span class="history-count" id="historyCount">2 сессии</span>
+        <div class="history-header-text">
+          <div class="history-eyebrow">Архив</div>
+          <h2 class="history-title">История сессий</h2>
+          <span class="history-subtitle">Сохранённые транскрипции, резюме и ключевые темы</span>
+        </div>
+        <div class="history-header-meta">
+          <div class="history-stat-chip">
+            <span class="stat-chip-num">2</span>
+            <span class="stat-chip-lbl">сессии</span>
+          </div>
+          <div class="history-stat-chip">
+            <span class="stat-chip-num">70</span>
+            <span class="stat-chip-lbl">минут</span>
+          </div>
+          <div class="history-stat-chip">
+            <span class="stat-chip-num">405</span>
+            <span class="stat-chip-lbl">фраз</span>
+          </div>
+        </div>
       </div>
       <div class="history-list" id="historyList">
 
         <!-- Mock session 1 -->
-        <div class="history-card" onclick="openHistoryCard(0)">
-          <div class="history-card-header">
-            <div class="history-card-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <article class="history-card" data-accent="indigo" onclick="openHistoryCard(0)">
+          <div class="history-card-accent"></div>
+          <div class="history-card-body">
+            <div class="history-card-header">
+              <div class="history-card-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <div class="history-card-meta">
+                <span class="history-card-title">Лекция по машинному обучению</span>
+                <span class="history-card-date">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  14 апреля 2026 · 09:15
+                </span>
+              </div>
+              <div class="history-card-badges">
+                <span class="badge badge-ru">RU</span>
+                <span class="badge badge-dur">42 мин</span>
+              </div>
             </div>
-            <div class="history-card-meta">
-              <span class="history-card-title">Лекция по машинному обучению</span>
-              <span class="history-card-date">14 апреля 2026 · 09:15</span>
-            </div>
-            <div class="history-card-badges">
-              <span class="badge badge-ru">RU</span>
-              <span class="badge badge-dur">42 мин</span>
+            <p class="history-card-preview">
+              Обсуждались основы нейронных сетей, методы обратного распространения ошибки и
+              практическое применение градиентного спуска в задачах классификации изображений...
+            </p>
+            <div class="history-card-footer">
+              <div class="history-stats-row">
+                <div class="history-stat">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  <span>247 фраз</span>
+                </div>
+                <div class="history-stat">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                  <span>Аватар</span>
+                </div>
+              </div>
+              <div class="history-stat-keywords">
+                <span class="kw-tag">нейросети</span>
+                <span class="kw-tag">градиент</span>
+                <span class="kw-tag">классификация</span>
+              </div>
             </div>
           </div>
-          <p class="history-card-preview">
-            Обсуждались основы нейронных сетей, методы обратного распространения ошибки и
-            практическое применение градиентного спуска в задачах классификации изображений...
-          </p>
-          <div class="history-card-footer">
-            <div class="history-stat">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              <span>247 фраз</span>
-            </div>
-            <div class="history-stat">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-              <span>Аватар активен</span>
-            </div>
-            <div class="history-stat history-stat-keywords">
-              <span class="kw-tag">нейросети</span>
-              <span class="kw-tag">градиент</span>
-              <span class="kw-tag">классификация</span>
-            </div>
-          </div>
-        </div>
+        </article>
 
         <!-- Mock session 2 -->
-        <div class="history-card" onclick="openHistoryCard(1)">
-          <div class="history-card-header">
-            <div class="history-card-icon">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <article class="history-card" data-accent="emerald" onclick="openHistoryCard(1)">
+          <div class="history-card-accent"></div>
+          <div class="history-card-body">
+            <div class="history-card-header">
+              <div class="history-card-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              </div>
+              <div class="history-card-meta">
+                <span class="history-card-title">Публичная лекция — Доступность технологий</span>
+                <span class="history-card-date">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  13 апреля 2026 · 14:00
+                </span>
+              </div>
+              <div class="history-card-badges">
+                <span class="badge badge-kz">KZ</span>
+                <span class="badge badge-dur">28 мин</span>
+              </div>
             </div>
-            <div class="history-card-meta">
-              <span class="history-card-title">Публичная лекция — Доступность технологий</span>
-              <span class="history-card-date">13 апреля 2026 · 14:00</span>
-            </div>
-            <div class="history-card-badges">
-              <span class="badge badge-kz">KZ</span>
-              <span class="badge badge-dur">28 мин</span>
+            <p class="history-card-preview">
+              Рассматривались принципы универсального дизайна, международный опыт создания
+              инклюзивных цифровых продуктов и роль AI в обеспечении доступности для людей с ОВЗ...
+            </p>
+            <div class="history-card-footer">
+              <div class="history-stats-row">
+                <div class="history-stat">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  <span>158 фраз</span>
+                </div>
+                <div class="history-stat">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                  <span>Аватар</span>
+                </div>
+              </div>
+              <div class="history-stat-keywords">
+                <span class="kw-tag">доступность</span>
+                <span class="kw-tag">инклюзия</span>
+                <span class="kw-tag">дизайн</span>
+              </div>
             </div>
           </div>
-          <p class="history-card-preview">
-            Рассматривались принципы универсального дизайна, международный опыт создания
-            инклюзивных цифровых продуктов и роль AI в обеспечении доступности для людей с ОВЗ...
-          </p>
-          <div class="history-card-footer">
-            <div class="history-stat">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-              <span>158 фраз</span>
-            </div>
-            <div class="history-stat">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-              <span>Аватар активен</span>
-            </div>
-            <div class="history-stat history-stat-keywords">
-              <span class="kw-tag">доступность</span>
-              <span class="kw-tag">инклюзия</span>
-              <span class="kw-tag">дизайн</span>
-            </div>
-          </div>
-        </div>
+        </article>
 
       </div>
     </div>
