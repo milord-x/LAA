@@ -1,27 +1,115 @@
-const API = "";
+const API    = "";
 const WS_URL = `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws/subtitles`;
 
-const btnStart    = document.getElementById("btnStart");
-const btnStop     = document.getElementById("btnStop");
-const statusDot   = document.getElementById("statusDot");
-const statusMsg   = document.getElementById("statusMsg");
-const subtitleBox = document.getElementById("subtitleBox");
-const keywordsEl  = document.getElementById("keywords");
-const avatarLabel = document.getElementById("avatarLabel");
+// ── DOM refs ──────────────────────────────────────────────────────────────
+const btnStart     = document.getElementById("btnStart");
+const btnStop      = document.getElementById("btnStop");
+const statusDot    = document.getElementById("statusDot");
+const statusMsg    = document.getElementById("statusMsg");
+const subtitleBox  = document.getElementById("subtitleBox");
+const subtitleEmpty = document.getElementById("subtitleEmpty");
+const keywordsEl   = document.getElementById("keywords");
+const avatarLabel  = document.getElementById("avatarLabel");
+const avatarLiveBadge = document.getElementById("avatarLiveBadge");
 const summaryPanel = document.getElementById("summaryPanel");
+const summaryEmpty = document.getElementById("summaryEmpty");
+const summaryTextBlock = document.getElementById("summaryTextBlock");
 const summaryText  = document.getElementById("summaryText");
+const summaryLiveText = document.getElementById("summaryLiveText");
 const micSelect    = document.getElementById("micSelect");
 const langBtns     = document.querySelectorAll(".lang-btn");
 
-let ws          = null;
-let wsReady     = false;
-let audioCtx    = null;
-let mediaStream = null;
-let workletNode = null;
-let sessionActive = false;  // single source of truth for session state
-let langSwitching = false;  // prevent concurrent lang switches
+// ── State ─────────────────────────────────────────────────────────────────
+let ws           = null;
+let wsReady      = false;
+let audioCtx     = null;
+let mediaStream  = null;
+let workletNode  = null;
+let sessionActive  = false;
+let langSwitching  = false;
+let liveUpdateTimer = null;
 
-// ── CWASA avatar ─────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════
+// SCREEN ROUTER
+// ══════════════════════════════════════════════════════════════════════════
+
+const screens = {
+  home:      document.getElementById("screenHome"),
+  subtitles: document.getElementById("screenSubtitles"),
+  summary:   document.getElementById("screenSummary"),
+  history:   document.getElementById("screenHistory"),
+};
+
+const navLinks = document.querySelectorAll(".nav-link");
+
+function navigateTo(name) {
+  Object.entries(screens).forEach(([k, el]) => {
+    el.classList.toggle("active", k === name);
+  });
+  navLinks.forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.screen === name);
+  });
+
+  if (name === "summary") startLiveUpdate();
+  else stopLiveUpdate();
+}
+
+navLinks.forEach(btn => {
+  btn.addEventListener("click", () => navigateTo(btn.dataset.screen));
+});
+
+// ── Hero Start button (Home screen) ─────────────────────────────────────
+function startHeroSession() {
+  navigateTo("subtitles");
+  // small delay to let render settle before starting audio
+  setTimeout(startSession, 100);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// SETTINGS PANEL
+// ══════════════════════════════════════════════════════════════════════════
+
+function openSettings() {
+  document.getElementById("settingsOverlay").classList.remove("hidden");
+  document.getElementById("settingsPanel").classList.remove("hidden");
+}
+
+function closeSettings() {
+  document.getElementById("settingsOverlay").classList.add("hidden");
+  document.getElementById("settingsPanel").classList.add("hidden");
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// HISTORY MODAL
+// ══════════════════════════════════════════════════════════════════════════
+
+const MOCK_SESSIONS = [
+  {
+    title: "Лекция по машинному обучению",
+    summary: "Ключевые темы: нейросети, градиентный спуск, классификация.\n\nРассматривались основы нейронных сетей и методы обратного распространения ошибки. Подробно объяснён принцип градиентного спуска и его роль в обучении моделей. Приведены практические примеры классификации изображений с использованием свёрточных сетей. Обсуждены современные архитектуры: ResNet, VGG, EfficientNet и их применение в задачах компьютерного зрения.",
+  },
+  {
+    title: "Публичная лекция — Доступность технологий",
+    summary: "Ключевые темы: доступность, инклюзия, универсальный дизайн.\n\nРассмотрены принципы универсального дизайна и международный опыт создания инклюзивных цифровых продуктов. Подчёркнута роль AI-технологий в обеспечении доступности для людей с ограниченными возможностями здоровья. Представлены примеры успешных решений из практики компаний Microsoft, Apple и Google.",
+  },
+];
+
+function openHistoryCard(idx) {
+  const s = MOCK_SESSIONS[idx];
+  document.getElementById("historyModalTitle").textContent = s.title;
+  document.getElementById("historyModalSummary").textContent = s.summary;
+  document.getElementById("historyModalOverlay").classList.remove("hidden");
+  document.getElementById("historyModal").classList.remove("hidden");
+}
+
+function closeHistoryModal() {
+  document.getElementById("historyModalOverlay").classList.add("hidden");
+  document.getElementById("historyModal").classList.add("hidden");
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// CWASA AVATAR
+// ══════════════════════════════════════════════════════════════════════════
 
 let cwasaReady = false;
 let avatarBusy = false;
@@ -62,7 +150,9 @@ function playSign(sigml) {
   _drainQueue();
 }
 
-// ── Microphone list ──────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════
+// MICROPHONE LIST
+// ══════════════════════════════════════════════════════════════════════════
 
 async function initMicList() {
   try {
@@ -92,10 +182,12 @@ async function fillMicSelect() {
 
 navigator.mediaDevices.addEventListener("devicechange", fillMicSelect);
 
-// ── Session ──────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════
+// SESSION
+// ══════════════════════════════════════════════════════════════════════════
 
 async function startSession() {
-  if (sessionActive) return;  // guard double-click
+  if (sessionActive) return;
 
   const deviceId = micSelect.value;
   try {
@@ -126,6 +218,10 @@ async function startSession() {
   setActive(true);
   setStatus("Открытие канала...");
 
+  // Clear previous subtitles
+  subtitleBox.innerHTML = "";
+  subtitleEmpty.classList.add("hidden");
+
   try {
     await openWSAndWait();
   } catch (e) {
@@ -140,7 +236,7 @@ async function startSession() {
 }
 
 async function stopSession() {
-  if (!sessionActive) return;  // guard if already stopped
+  if (!sessionActive) return;
 
   sessionActive = false;
   stopCapture();
@@ -157,7 +253,9 @@ async function stopSession() {
   setStatus("");
 }
 
-// ── WebSocket ────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════
+// WEBSOCKET
+// ══════════════════════════════════════════════════════════════════════════
 
 function openWSAndWait() {
   return new Promise((resolve, reject) => {
@@ -174,7 +272,6 @@ function openWSAndWait() {
     ws.onclose = (e) => {
       wsReady = false;
       console.log("[WS] closed", e.code);
-      // If session was still active (unexpected disconnect) — reset UI
       if (sessionActive) {
         sessionActive = false;
         stopCapture();
@@ -186,7 +283,9 @@ function openWSAndWait() {
   });
 }
 
-// ── Audio capture ────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════
+// AUDIO CAPTURE
+// ══════════════════════════════════════════════════════════════════════════
 
 async function startCapture() {
   audioCtx = new AudioContext({ sampleRate: 16000 });
@@ -223,19 +322,21 @@ function stopCapture() {
   if (mediaStream)  { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; }
 }
 
-// ── UI helpers ───────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════
+// UI HELPERS
+// ══════════════════════════════════════════════════════════════════════════
 
 function setActive(active) {
   btnStart.disabled  = active;
   btnStop.disabled   = !active;
   micSelect.disabled = active;
   statusDot.className = active ? "dot dot-active" : "dot dot-idle";
+  if (avatarLiveBadge) avatarLiveBadge.classList.toggle("recording", active);
   if (!active) setStatus("");
   _updateLangBtns();
 }
 
 function _updateLangBtns() {
-  // Lang buttons: disabled only during switch, never just because session is active
   langBtns.forEach(b => { b.disabled = langSwitching; });
 }
 
@@ -244,6 +345,9 @@ function setStatus(msg) {
 }
 
 function appendSubtitle({ text, keywords, avatar_sigml }) {
+  // remove empty state placeholder
+  if (subtitleEmpty) subtitleEmpty.classList.add("hidden");
+
   const div = document.createElement("div");
   div.className = "subtitle-chunk";
   div.textContent = text;
@@ -252,7 +356,7 @@ function appendSubtitle({ text, keywords, avatar_sigml }) {
 
   if (keywords?.length) renderKeywords(keywords);
   if (avatar_sigml) {
-    avatarLabel.textContent = text.slice(0, 60);
+    avatarLabel.textContent = text.slice(0, 80);
     playSign(avatar_sigml);
   }
 }
@@ -267,6 +371,8 @@ function renderKeywords(words) {
   });
 }
 
+// ── Summary fetch (after session stop) ───────────────────────────────────
+
 async function fetchSummary(sessionId) {
   if (!sessionId) return;
   try {
@@ -275,18 +381,47 @@ async function fetchSummary(sessionId) {
     const data = await res.json();
     if (!data.summary) return;
     summaryText.textContent = data.summary;
-    summaryPanel.classList.remove("hidden");
-    summaryPanel.scrollIntoView({ behavior: "smooth" });
+    summaryEmpty.classList.add("hidden");
+    summaryTextBlock.classList.remove("hidden");
+    // navigate to summary screen
+    navigateTo("summary");
   } catch (e) {
     console.error("[Summary] fetch failed:", e);
   }
 }
 
-// ── Language switcher ────────────────────────────────────────────────────────
+// ── Live transcript update on Summary screen ─────────────────────────────
+
+async function updateLiveTranscript() {
+  if (!sessionActive) return;
+  try {
+    const res = await fetch(`${API}/summary/current/live`);
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.text && summaryLiveText) {
+      summaryLiveText.textContent = data.text;
+    }
+  } catch (_) {}
+}
+
+function startLiveUpdate() {
+  stopLiveUpdate();
+  if (sessionActive) {
+    liveUpdateTimer = setInterval(updateLiveTranscript, 3000);
+  }
+}
+
+function stopLiveUpdate() {
+  if (liveUpdateTimer) { clearInterval(liveUpdateTimer); liveUpdateTimer = null; }
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// LANGUAGE SWITCHER
+// ══════════════════════════════════════════════════════════════════════════
 
 langBtns.forEach(btn => {
   btn.addEventListener("click", async () => {
-    if (langSwitching) return;  // prevent concurrent switches
+    if (langSwitching) return;
 
     const mode = btn.dataset.mode;
     const isKZ = mode === "kz";
@@ -302,7 +437,6 @@ langBtns.forEach(btn => {
         langBtns.forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
       } else {
-        // Restore previous active on failure
         prevActive?.classList.add("active");
         console.error("[Lang] switch failed:", res.status);
       }
@@ -323,10 +457,9 @@ fetch(`${API}/session/mode`)
   .then(d => langBtns.forEach(b => b.classList.toggle("active", b.dataset.mode === d.mode)))
   .catch(() => {});
 
-// ── Init ─────────────────────────────────────────────────────────────────────
-
-btnStart.addEventListener("click", startSession);
-btnStop.addEventListener("click", stopSession);
+// ══════════════════════════════════════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════════════════════════════════════
 
 initMicList();
 
