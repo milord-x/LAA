@@ -30,6 +30,10 @@ class SessionManager:
         self._current: Optional[str] = None
 
     def create(self) -> Session:
+        # Force-stop any lingering active session before creating a new one
+        existing = self.current()
+        if existing and existing.active:
+            existing.stop()
         session = Session()
         self._sessions[session.id] = session
         self._current = session.id

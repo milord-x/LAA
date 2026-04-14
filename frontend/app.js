@@ -68,10 +68,14 @@ async function startSession() {
   }
 
   setStatus("Подключение...");
-  let data;
   try {
     const res = await fetch(`${API}/session/start`, { method: "POST" });
-    data = await res.json();
+    if (!res.ok) {
+      alert("Ошибка сервера: " + res.status);
+      stopCapture();
+      return;
+    }
+    await res.json(); // consume body
   } catch (e) {
     alert("Сервер недоступен: " + e.message);
     stopCapture();

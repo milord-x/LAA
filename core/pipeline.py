@@ -155,13 +155,17 @@ class Pipeline:
                 return True
         return False
 
+    def reset_state(self) -> None:
+        """Reset inter-session state (call when a new session starts)."""
+        self._last_text = ""
+
     async def process_bytes(self, raw: bytes) -> dict | None:
         if not self._model_loaded:
             print("[Pipeline] model not loaded, dropping chunk")
             return None
 
         session = session_manager.current()
-        if session is None:
+        if session is None or not session.active:
             print("[Pipeline] no active session")
             return None
 

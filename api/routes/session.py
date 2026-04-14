@@ -19,6 +19,7 @@ async def start_session() -> SessionResponse:
         return SessionResponse(session_id=existing.id, status="already_running")
 
     session = session_manager.create()
+    pipeline.reset_state()
     return SessionResponse(session_id=session.id, status="started")
 
 
