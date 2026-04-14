@@ -41,7 +41,9 @@ async def websocket_subtitles(websocket: WebSocket) -> None:
 
 
 frontend_dir = Path(__file__).parent.parent / "frontend"
+assets_dir = Path(__file__).parent.parent / "assets"
 app.mount("/static", StaticFiles(directory=str(frontend_dir)), name="static")
+app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
 
 
 @app.get("/")
