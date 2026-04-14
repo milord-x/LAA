@@ -3,9 +3,10 @@ SiGML lookup: maps Russian/English keywords to SiGML sign fragments.
 Returns a multi-sign SiGML string for a given text segment.
 """
 
-# Each entry: keyword (lowercase) -> inner HamNoSys content for hns_sign element
+import hashlib
+
+# Each entry: keyword (lowercase) -> hns_sign XML element (validated against CWASA HtoG)
 # Signs sourced from ISL (Indian SL) dataset via CWASA HamNoSys format.
-# For demo purposes — any valid HamNoSys SiGML will animate the avatar.
 
 _SIGN_MAP: dict[str, str] = {
     # English
@@ -39,27 +40,33 @@ _SIGN_MAP: dict[str, str] = {
     "жоқ": '<hns_sign gloss="no"><hamnosys_nonmanual></hamnosys_nonmanual><hamnosys_manual><hampinch12/><hamfingerstraightmod/><hamindexfinger/><hammiddlefinger/><hamextfingerul/><hampalmd/><hamshoulders/><hamlrat/></hamnosys_manual></hns_sign>',
 }
 
-# Fallback sign: a simple pointing/greeting gesture for unknown words
-_FALLBACK_SIGN = '<hns_sign gloss="sign"><hamnosys_nonmanual></hamnosys_nonmanual><hamnosys_manual><hamflathand/><hamextfingeru/><hampalml/><hamchest/><hamlrat/><hamclose/></hamnosys_manual></hns_sign>'
+# Pool of valid signs used for variety when no keyword match found.
+# Deterministic by text hash so same phrase always gets same sign.
+_POOL = [
+    "hello", "good", "yes", "no", "please", "understand",
+    "know", "not", "now", "name", "help", "announce",
+]
 
 
-def text_to_sigml(text: str) -> str | None:
+def text_to_sigml(text: str) -> str:
     """
     Convert a text segment to a SiGML string.
-    Looks up each word in the dictionary; returns None if no matches found.
+    - If keywords are found in the text, use those signs.
+    - Otherwise pick a sign from the pool deterministically by text hash,
+      so the avatar always animates with variety instead of one repeated gesture.
     """
     words = text.lower().split()
     signs: list[str] = []
 
     for word in words:
-        # Strip punctuation
         clean = word.strip(".,!?;:\"'()-")
         if clean in _SIGN_MAP:
             signs.append(_SIGN_MAP[clean])
 
     if not signs:
-        # Use fallback for any non-empty text so avatar always animates
-        signs.append(_FALLBACK_SIGN)
+        # Pick deterministically from pool — same text = same sign, different texts vary
+        idx = int(hashlib.md5(text.encode()).hexdigest(), 16) % len(_POOL)
+        signs.append(_SIGN_MAP[_POOL[idx]])
 
     body = "".join(signs)
     return f'<sigml>{body}</sigml>'
