@@ -27,11 +27,16 @@ def _load_pair(src: str, tgt: str = "en") -> Optional[object]:
         if pkg is None:
             print(f"[Translator] No package found for {src}->{tgt}")
             return None
-        if not pkg.is_installed():
-            print(f"[Translator] Downloading {src}->{tgt} package (~50MB)...")
-            package.install_from_path(pkg.download())
-            print(f"[Translator] {src}->{tgt} installed.")
         installed = translate.get_installed_languages()
+        already = any(
+            l.code == src and any(t.language.code == tgt for t in l.translations_from)
+            for l in installed
+        )
+        if not already:
+            print(f"[Translator] Downloading {src}->{tgt} package (~50MB)...")
+            pkg.install()
+            print(f"[Translator] {src}->{tgt} installed.")
+            installed = translate.get_installed_languages()
         src_lang = next((l for l in installed if l.code == src), None)
         if src_lang is None:
             return None
