@@ -8,13 +8,13 @@
 
 .divAv {
   box-sizing: border-box;
-  position: relative; background: #A3B8D2;
+  position: relative; background: transparent;
   width: 100%; height: 100%;
   margin: 0; border: 0; padding: 0;
 }
 
 .CWASAAvatar {
-  position: relative; background: #A3B8D2;
+  position: relative; background: transparent;
   width: 100%; height: 100%;
   margin: 0; border: 0; padding: 0;
 }
