@@ -194,6 +194,8 @@ class Pipeline:
         t0 = time.time()
         try:
             chunk = await loop.run_in_executor(None, self._asr.transcribe_raw, audio_np)
+        except asyncio.CancelledError:
+            raise  # propagate shutdown signal
         except Exception as e:
             print(f"[Pipeline] ASR error: {e}")
             return None
