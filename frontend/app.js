@@ -12,34 +12,47 @@ const avatarLabel = document.getElementById("avatarLabel");
 // ── CWASA avatar ─────────────────────────────────────────────────────────────
 
 let cwasaReady = false;
-let sigmlQueue = [];
+let avatarBusy = false;
+const sigmlQueue = [];
 
-// CWASA calls this hook when the avatar is fully initialized
+function _drainQueue() {
+  if (avatarBusy || sigmlQueue.length === 0) return;
+  const sigml = sigmlQueue.shift();
+  avatarBusy = true;
+  try {
+    CWASA.playSiGMLText(sigml, 0);
+  } catch (e) {
+    console.warn("[CWASA] playSiGMLText failed:", e.message);
+    avatarBusy = false;
+    _drainQueue();
+  }
+}
+
 if (typeof CWASA !== "undefined") {
   CWASA.addHook("avatarready", () => {
     cwasaReady = true;
     console.log("[CWASA] avatar ready");
-    // Drain any queued SiGML
-    while (sigmlQueue.length > 0) {
-      const s = sigmlQueue.shift();
-      try { CWASA.playSiGMLText(s, 0); } catch (_) {}
-    }
+    _drainQueue();
+  });
+
+  // Fired when avatar finishes an animation and goes idle
+  CWASA.addHook("animidle", () => {
+    avatarBusy = false;
+    _drainQueue();
   });
 }
 
 function playSign(sigml) {
-  if (!sigml) return;
-  try {
-    if (cwasaReady) {
-      CWASA.playSiGMLText(sigml, 0);
-    } else {
-      // Buffer up to 3 pending signs; drop oldest if overflowing
+  if (!sigml || !cwasaReady) {
+    if (sigml) {
       sigmlQueue.push(sigml);
-      if (sigmlQueue.length > 3) sigmlQueue.shift();
+      if (sigmlQueue.length > 5) sigmlQueue.shift();
     }
-  } catch (e) {
-    console.warn("[CWASA] playSiGMLText failed:", e.message);
+    return;
   }
+  sigmlQueue.push(sigml);
+  if (sigmlQueue.length > 5) sigmlQueue.shift();
+  _drainQueue();
 }
 const summaryPanel = document.getElementById("summaryPanel");
 const summaryText  = document.getElementById("summaryText");
