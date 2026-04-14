@@ -1258,22 +1258,34 @@ body { position: relative; overflow-x: hidden; }
 }
 
 .avatar-stage::before {
-  content: none;
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 122px;
+  width: 392px;
+  height: 138px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background:
+    radial-gradient(ellipse at center, rgba(239,244,251,.92) 0%, rgba(226,234,245,.56) 34%, rgba(184,202,226,.18) 56%, rgba(157,179,204,0) 82%);
+  filter: blur(22px);
+  opacity: 0.98;
+  z-index: 1;
 }
 
 .avatar-stage::after {
   content: '';
   position: absolute;
   left: 50%;
-  bottom: 54px;
-  width: 300px;
-  height: 72px;
+  bottom: 74px;
+  width: 430px;
+  height: 118px;
   transform: translateX(-50%);
   border-radius: 999px;
   background:
-    radial-gradient(ellipse at center, rgba(233,241,252,.78) 0%, rgba(211,224,241,.42) 38%, rgba(161,182,207,0) 74%);
-  filter: blur(16px);
-  opacity: 0.95;
+    radial-gradient(ellipse at center, rgba(231,239,249,.56) 0%, rgba(210,223,240,.3) 40%, rgba(161,182,207,0) 78%);
+  filter: blur(28px);
+  opacity: 0.92;
   z-index: 1;
 }
 
@@ -1326,20 +1338,7 @@ body { position: relative; overflow-x: hidden; }
   z-index: 1;
 }
 
-.avatar-frame::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: 40px;
-  width: 286px;
-  height: 92px;
-  transform: translateX(-50%);
-  border-radius: 999px;
-  background: radial-gradient(ellipse at center, rgba(236,242,250,.8) 0%, rgba(221,230,242,.42) 36%, rgba(170,188,212,.1) 58%, rgba(157,179,204,0) 80%);
-  filter: blur(20px);
-  pointer-events: none;
-  z-index: 1;
-}
+.avatar-frame::after { content: none; }
 
 .CWASAAvatar {
   position: relative;
@@ -2528,7 +2527,8 @@ body { position: relative; overflow-x: hidden; }
   .avatar-live-badge { top: 0; }
   .avatar-corner-tag { top: 44px; font-size: 0.62rem; padding: 5px 10px; }
   .avatar-stage { width: 320px; height: 434px; }
-  .avatar-stage::after { width: 180px; height: 48px; bottom: 40px; }
+  .avatar-stage::before { width: 220px; height: 84px; bottom: 94px; filter: blur(16px); }
+  .avatar-stage::after { width: 240px; height: 72px; bottom: 58px; filter: blur(20px); }
   .avatar-frame { width: 270px; height: 384px; border-radius: 28px; }
   .CWASAAvatar { transform: translateY(-6px); }
   .avatar-caption { font-size: 0.9rem; max-width: 340px; padding: 0 12px; }
