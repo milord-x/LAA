@@ -4,6 +4,11 @@ Pool used for CWASA browser avatar variety.
 """
 
 import hashlib
+from avatar.ru_en_dict import RU_EN
+from avatar.kz_en_dict import KZ_EN
+
+# Merged RU+KZ → EN translation table
+_RU_KZ_TO_EN: dict[str, str] = {**RU_EN, **KZ_EN}
 
 _SIGN_MAP: dict[str, str] = {
     "about": '<hns_sign gloss="about"><hamnosys_nonmanual></hamnosys_nonmanual><hamnosys_manual><hamsymmlr/><hamalternatingmotion/><hamfinger2/><hamextfingerl/><hampalml/><hamparbegin/><hamfingerside/><hamindexfinger/><hamplus/><hamfingerside/><hamindexfinger/><hamparend/><hamtouch/><hamchest/><hamcircleo/><hamtouch/></hamnosys_manual></hns_sign>',
@@ -455,145 +460,6 @@ _SIGN_MAP: dict[str, str] = {
 
 _POOL = [k for k, v in _SIGN_MAP.items() if v.startswith("<hns_sign")]
 
-# RU/KZ word → EN key translation table (lecture/everyday vocabulary)
-_RU_TO_EN: dict[str, str] = {
-    # Базовые
-    "и": "and", "в": "in", "на": "on", "с": "with", "по": "about",
-    "это": "this", "не": "not", "то": "that", "так": "so", "как": "how",
-    "что": "what", "где": "where", "когда": "when", "почему": "why",
-    "кто": "who", "его": "him", "её": "her", "они": "we", "мы": "we",
-    "вы": "you", "я": "me", "он": "he", "она": "she",
-    # Глаголы
-    "говорить": "speak", "говорит": "speak", "говорим": "speak",
-    "сказать": "say", "сказал": "say",
-    "делать": "do", "делает": "do", "делаем": "do",
-    "идти": "go", "идёт": "go", "идём": "go",
-    "прийти": "come", "приходить": "come",
-    "есть": "eat", "пить": "drink",
-    "спать": "sleep", "думать": "think", "думает": "think",
-    "знать": "know", "знает": "know", "знаем": "know",
-    "понимать": "understand", "понимает": "understand",
-    "читать": "read", "читает": "read",
-    "писать": "write", "пишет": "write",
-    "учить": "learn", "учится": "learn", "учиться": "learn",
-    "учить": "teach", "преподавать": "teach",
-    "работать": "work", "работает": "work",
-    "помочь": "help", "помогать": "help",
-    "открыть": "open", "закрыть": "close",
-    "начать": "begin", "начинать": "begin", "начало": "begin",
-    "закончить": "finish", "конец": "finish",
-    "видеть": "see", "смотреть": "see",
-    "слышать": "hear", "слушать": "hear",
-    "давать": "give", "дать": "give",
-    "брать": "take", "взять": "take",
-    "приходить": "come", "уходить": "go",
-    "отвечать": "answer", "ответить": "answer",
-    "спрашивать": "question", "спросить": "question",
-    "объяснять": "explain", "объяснить": "explain",
-    "показывать": "show", "показать": "show",
-    "искать": "search", "найти": "find",
-    "строить": "build", "создавать": "build",
-    "использовать": "use", "применять": "use",
-    "решать": "solve", "решить": "solve",
-    "обсуждать": "discuss", "обсудить": "discuss",
-    "развивать": "develop", "изменять": "change",
-    "получать": "receive", "получить": "receive",
-    "отправить": "send", "посылать": "send",
-    "звонить": "call", "позвонить": "call",
-    "играть": "play", "танцевать": "dance",
-    "плакать": "cry", "смеяться": "laugh",
-    "любить": "love", "нравиться": "like",
-    "бояться": "fear", "помнить": "remind",
-    "забывать": "forget", "повторять": "repeat",
-    "считать": "count", "делить": "divide",
-    # Существительные
-    "привет": "hello", "здравствуйте": "hello", "пока": "bye",
-    "да": "yes", "нет": "no",
-    "хорошо": "good", "плохо": "bad",
-    "дом": "home", "школа": "school", "класс": "class",
-    "учитель": "teach", "студент": "student", "ученик": "student",
-    "книга": "book", "тетрадь": "notebook", "ручка": "pen",
-    "вопрос": "question", "ответ": "answer", "задача": "problem",
-    "урок": "education", "лекция": "education", "занятие": "education",
-    "тема": "about", "предмет": "science", "курс": "education",
-    "человек": "person", "люди": "person", "мужчина": "man",
-    "женщина": "woman", "ребёнок": "child", "дети": "child",
-    "мать": "mother", "отец": "father", "брат": "brother",
-    "сестра": "sister", "семья": "family", "друг": "friend",
-    "деньги": "money", "время": "time", "место": "place",
-    "вода": "water", "еда": "food", "хлеб": "bread",
-    "дорога": "road", "машина": "car", "автобус": "bus",
-    "город": "area", "страна": "area", "мир": "world",
-    "язык": "language", "слово": "sentence", "текст": "sentence",
-    "информация": "internet", "данные": "internet", "система": "science",
-    "программа": "plan", "проект": "plan", "работа": "work",
-    "результат": "result", "ошибка": "mistake", "проблема": "problem",
-    "идея": "idea", "метод": "method", "способ": "method",
-    "цель": "plan", "задание": "exercise", "пример": "example",
-    "правило": "procedure", "закон": "procedure",
-    "утро": "morning", "вечер": "evening", "день": "day", "ночь": "night",
-    "сегодня": "today", "завтра": "tomorrow", "вчера": "yesterday",
-    "год": "year", "месяц": "month", "неделя": "week",
-    "час": "hour", "минута": "minute", "сейчас": "now",
-    "красный": "red", "синий": "blue", "зелёный": "green",
-    "белый": "white", "чёрный": "black", "жёлтый": "yellow",
-    "большой": "big", "маленький": "small", "новый": "new",
-    "старый": "old", "хороший": "good", "плохой": "bad",
-    "важный": "important", "интересный": "interesting",
-    "трудный": "difficult", "лёгкий": "easy", "быстрый": "quick",
-    "медленный": "slow", "тихий": "quiet", "громкий": "loud",
-    "первый": "first", "последний": "last", "следующий": "next",
-    "много": "many", "мало": "few", "все": "all", "каждый": "every",
-    "имя": "name", "номер": "number", "список": "list",
-    "математика": "science", "физика": "science", "химия": "science",
-    "история": "education", "география": "area", "биология": "science",
-    "компьютер": "computer", "телефон": "phone", "интернет": "internet",
-    "доктор": "doctor", "больница": "clinic", "лекарство": "medicine",
-    # Животные и природа
-    "собака": "dog", "кошка": "cat", "птица": "bird", "дерево": "tree",
-    "парк": "park", "лес": "forest", "река": "water", "море": "water",
-    "трава": "green", "цветок": "flower", "небо": "blue", "солнце": "light",
-    # Действия (бытовые)
-    "гулять": "go", "выгуливал": "go", "бежать": "run", "бегать": "run",
-    "прыгать": "jump", "плавать": "swim", "играть": "play",
-    "готовить": "cook", "убирать": "clean", "мыть": "wash",
-    "купить": "buy", "продать": "sell", "платить": "pay",
-    "ехать": "go", "лететь": "fly", "плыть": "swim",
-    "стоять": "stay", "сидеть": "sit", "лежать": "sleep",
-    "смотреть": "see", "слушать": "hear", "чувствовать": "feel",
-    "любить": "love", "ненавидеть": "hate", "бояться": "fear",
-    "помогать": "help", "мешать": "avoid", "ждать": "wait",
-    "встречать": "meet", "провожать": "send", "звать": "call",
-    # Местоимения и связки
-    "свою": "me", "свой": "me", "своё": "me", "своя": "me",
-    "мой": "me", "моя": "me", "моё": "me", "мои": "me",
-    "твой": "you", "твоя": "you", "наш": "we", "наша": "we",
-    "тот": "that", "эта": "this", "эти": "this", "эту": "this",
-    "всё": "all", "все": "all", "каждый": "every", "каждая": "every",
-    "очень": "more", "много": "many", "мало": "few", "немного": "few",
-    "уже": "now", "ещё": "more", "тоже": "also", "только": "alone",
-    "потому": "why", "поэтому": "why", "хотя": "but", "если": "or",
-    # Описания
-    "красивый": "beautiful", "красивая": "beautiful",
-    "интересный": "interesting", "интересная": "interesting",
-    "важный": "important", "важная": "important",
-    "новый": "new", "новая": "new", "старый": "old", "старая": "old",
-    "молодой": "young", "высокий": "tall", "низкий": "short",
-    "длинный": "long", "короткий": "short", "широкий": "big",
-    "горячий": "hot", "холодный": "cold", "тёплый": "warm",
-    "громкий": "loud", "тихий": "quiet", "быстрый": "quick",
-    # Казахский базовый
-    "сәлем": "hello", "жақсы": "good", "иә": "yes", "жоқ": "no",
-    "рақмет": "thank", "кешіріңіз": "sorry", "өтінеміз": "please",
-    "бар": "there", "жоқ": "no", "болады": "yes", "болмайды": "no",
-    "мен": "me", "сен": "you", "ол": "he", "біз": "we",
-    "үй": "home", "мектеп": "school", "сынып": "class",
-    "оқу": "read", "жазу": "write", "білу": "know",
-    "келу": "come", "кету": "go", "беру": "give", "алу": "take",
-    "жеу": "eat", "ішу": "drink", "ұйықтау": "sleep",
-    "ойлау": "think", "сөйлеу": "speak", "тыңдау": "hear",
-}
-
 
 _MAX_SIGNS = 3  # max signs per segment to stay in sync with speech
 
@@ -606,7 +472,7 @@ def _lookup_words(words: list[str]) -> list[str]:
         if entry and entry.startswith("<hns_sign"):
             signs.append(entry)
             continue
-        en_word = _RU_TO_EN.get(clean)
+        en_word = _RU_KZ_TO_EN.get(clean)
         if en_word:
             entry = _SIGN_MAP.get(en_word)
             if entry and entry.startswith("<hns_sign"):
@@ -624,7 +490,7 @@ def text_to_sigml(text: str) -> str:
     words = text.lower().split()
     signs = _lookup_words(words)
 
-    # Try argostranslate on full text to catch words not in _RU_TO_EN
+    # Try argostranslate on full text to catch words not in _RU_KZ_TO_EN
     if len(signs) < _MAX_SIGNS:
         try:
             from avatar.translator import translate_to_en

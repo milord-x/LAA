@@ -8,6 +8,18 @@ const statusMsg   = document.getElementById("statusMsg");
 const subtitleBox = document.getElementById("subtitleBox");
 const keywordsEl  = document.getElementById("keywords");
 const avatarLabel = document.getElementById("avatarLabel");
+const summaryPanel = document.getElementById("summaryPanel");
+const summaryText  = document.getElementById("summaryText");
+const micSelect    = document.getElementById("micSelect");
+const langBtns     = document.querySelectorAll(".lang-btn");
+
+let ws          = null;
+let wsReady     = false;
+let audioCtx    = null;
+let mediaStream = null;
+let workletNode = null;
+let sessionActive = false;  // single source of truth for session state
+let langSwitching = false;  // prevent concurrent lang switches
 
 // ── CWASA avatar ─────────────────────────────────────────────────────────────
 
@@ -34,8 +46,6 @@ if (typeof CWASA !== "undefined") {
     console.log("[CWASA] avatar ready");
     _drainQueue();
   });
-
-  // Fired when avatar finishes an animation and goes idle
   CWASA.addHook("animidle", () => {
     avatarBusy = false;
     _drainQueue();
@@ -44,34 +54,20 @@ if (typeof CWASA !== "undefined") {
 
 function playSign(sigml) {
   if (!sigml || !cwasaReady) {
-    if (sigml) {
-      sigmlQueue.push(sigml);
-      if (sigmlQueue.length > 5) sigmlQueue.shift();
-    }
+    if (sigml) { sigmlQueue.push(sigml); if (sigmlQueue.length > 5) sigmlQueue.shift(); }
     return;
   }
   sigmlQueue.push(sigml);
   if (sigmlQueue.length > 5) sigmlQueue.shift();
   _drainQueue();
 }
-const summaryPanel = document.getElementById("summaryPanel");
-const summaryText  = document.getElementById("summaryText");
-const micSelect    = document.getElementById("micSelect");
-const langBtns     = document.querySelectorAll(".lang-btn");
-
-let ws          = null;
-let wsReady     = false;
-let audioCtx    = null;
-let mediaStream = null;
-let workletNode = null;
 
 // ── Microphone list ──────────────────────────────────────────────────────────
 
 async function initMicList() {
-  // Request permission once so browser reveals device labels
   try {
     const s = await navigator.mediaDevices.getUserMedia({ audio: true });
-    s.getTracks().forEach(t => t.stop()); // release immediately
+    s.getTracks().forEach(t => t.stop());
   } catch (_) {}
   await fillMicSelect();
 }
@@ -88,20 +84,19 @@ async function fillMicSelect() {
       opt.textContent = d.label || `Микрофон ${i + 1}`;
       micSelect.appendChild(opt);
     });
-    if (prev && [...micSelect.options].some(o => o.value === prev)) {
-      micSelect.value = prev;
-    }
+    if (prev && [...micSelect.options].some(o => o.value === prev)) micSelect.value = prev;
   } catch (e) {
     console.warn("[Mic] enumerate failed:", e.message);
   }
 }
 
-// Re-fill list when devices change (user plugs in headset etc.)
 navigator.mediaDevices.addEventListener("devicechange", fillMicSelect);
 
 // ── Session ──────────────────────────────────────────────────────────────────
 
 async function startSession() {
+  if (sessionActive) return;  // guard double-click
+
   const deviceId = micSelect.value;
   try {
     const constraints = deviceId ? { deviceId: { exact: deviceId } } : true;
@@ -120,19 +115,21 @@ async function startSession() {
       stopCapture();
       return;
     }
-    await res.json(); // consume body
+    await res.json();
   } catch (e) {
     alert("Сервер недоступен: " + e.message);
     stopCapture();
     return;
   }
 
+  sessionActive = true;
   setActive(true);
   setStatus("Открытие канала...");
 
   try {
     await openWSAndWait();
   } catch (e) {
+    sessionActive = false;
     setActive(false);
     stopCapture();
     return;
@@ -143,19 +140,21 @@ async function startSession() {
 }
 
 async function stopSession() {
+  if (!sessionActive) return;  // guard if already stopped
+
+  sessionActive = false;
   stopCapture();
   if (ws) { ws.close(); ws = null; }
   wsReady = false;
+  setActive(false);
   setStatus("Генерация резюме...");
 
   try {
     const res = await fetch(`${API}/session/stop`, { method: "POST" });
     const data = await res.json();
-    setActive(false);
     if (data.session_id) await fetchSummary(data.session_id);
-  } catch (_) {
-    setActive(false);
-  }
+  } catch (_) {}
+  setStatus("");
 }
 
 // ── WebSocket ────────────────────────────────────────────────────────────────
@@ -164,7 +163,7 @@ function openWSAndWait() {
   return new Promise((resolve, reject) => {
     ws = new WebSocket(WS_URL);
     ws.binaryType = "arraybuffer";
-    ws.onopen  = () => { wsReady = true; resolve(); };
+    ws.onopen = () => { wsReady = true; resolve(); };
     ws.onmessage = ({ data }) => {
       try {
         const p = JSON.parse(data);
@@ -172,7 +171,18 @@ function openWSAndWait() {
       } catch (_) {}
     };
     ws.onerror = (e) => { console.error("[WS] error", e); reject(e); };
-    ws.onclose = (e) => { wsReady = false; console.log("[WS] closed", e.code); };
+    ws.onclose = (e) => {
+      wsReady = false;
+      console.log("[WS] closed", e.code);
+      // If session was still active (unexpected disconnect) — reset UI
+      if (sessionActive) {
+        sessionActive = false;
+        stopCapture();
+        setActive(false);
+        setStatus("Соединение прервано");
+        setTimeout(() => setStatus(""), 3000);
+      }
+    };
   });
 }
 
@@ -189,11 +199,8 @@ async function startCapture() {
 
   let n = 0;
   workletNode.port.onmessage = ({ data: msg }) => {
-    if (msg.type === "init") {
-      console.log("[Audio] worklet rate:", msg.sampleRate);
-      return;
-    }
-    if (msg.type === "chunk" && wsReady) {
+    if (msg.type === "init") { console.log("[Audio] worklet rate:", msg.sampleRate); return; }
+    if (msg.type === "chunk" && wsReady && ws?.readyState === WebSocket.OPEN) {
       n++;
       const header = new ArrayBuffer(8);
       const v = new DataView(header);
@@ -221,10 +228,15 @@ function stopCapture() {
 function setActive(active) {
   btnStart.disabled  = active;
   btnStop.disabled   = !active;
-  micSelect.disabled = active;  // lock mic selector during recording
-  langBtns.forEach(b => b.disabled = active);
+  micSelect.disabled = active;
   statusDot.className = active ? "dot dot-active" : "dot dot-idle";
   if (!active) setStatus("");
+  _updateLangBtns();
+}
+
+function _updateLangBtns() {
+  // Lang buttons: disabled only during switch, never just because session is active
+  langBtns.forEach(b => { b.disabled = langSwitching; });
 }
 
 function setStatus(msg) {
@@ -256,10 +268,12 @@ function renderKeywords(words) {
 }
 
 async function fetchSummary(sessionId) {
+  if (!sessionId) return;
   try {
     const res = await fetch(`${API}/summary/${sessionId}`);
     if (!res.ok) return;
     const data = await res.json();
+    if (!data.summary) return;
     summaryText.textContent = data.summary;
     summaryPanel.classList.remove("hidden");
     summaryPanel.scrollIntoView({ behavior: "smooth" });
@@ -272,21 +286,33 @@ async function fetchSummary(sessionId) {
 
 langBtns.forEach(btn => {
   btn.addEventListener("click", async () => {
+    if (langSwitching) return;  // prevent concurrent switches
+
     const mode = btn.dataset.mode;
     const isKZ = mode === "kz";
-    langBtns.forEach(b => { b.classList.remove("active"); b.disabled = true; });
-    setStatus(isKZ ? "Загрузка KZ модели (~10 сек)..." : "");
+    const prevActive = document.querySelector(".lang-btn.active");
+
+    langSwitching = true;
+    _updateLangBtns();
+    setStatus(isKZ ? "Загрузка KZ модели (~10 сек)..." : "Смена языка...");
+
     try {
       const res = await fetch(`${API}/session/mode/${mode}`, { method: "POST" });
       if (res.ok) {
         langBtns.forEach(b => b.classList.remove("active"));
         btn.classList.add("active");
+      } else {
+        // Restore previous active on failure
+        prevActive?.classList.add("active");
+        console.error("[Lang] switch failed:", res.status);
       }
     } catch (e) {
+      prevActive?.classList.add("active");
       console.error("[Lang] switch failed:", e);
     } finally {
-      langBtns.forEach(b => { b.disabled = false; });
-      setStatus("");
+      langSwitching = false;
+      _updateLangBtns();
+      setStatus(sessionActive ? "Запись" : "");
     }
   });
 });
@@ -302,10 +328,8 @@ fetch(`${API}/session/mode`)
 btnStart.addEventListener("click", startSession);
 btnStop.addEventListener("click", stopSession);
 
-// Request mic permission immediately so list shows real labels from the start
 initMicList();
 
-// Init CWASA after page is interactive (non-blocking)
 if (typeof CWASA !== "undefined") {
   CWASA.init();
 }

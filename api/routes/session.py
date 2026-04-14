@@ -41,6 +41,7 @@ async def set_mode(mode: str) -> dict:
     import asyncio
     loop = asyncio.get_running_loop()
     await loop.run_in_executor(None, pipeline._asr.set_mode, mode)
+    pipeline.reset_state()  # clear dedup cache on lang switch
     return {"mode": mode}
 
 
