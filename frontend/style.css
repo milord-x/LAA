@@ -1171,24 +1171,29 @@ body { position: relative; overflow-x: hidden; }
   display: flex;
   align-items: center;
   gap: 9px;
-  background: rgba(255,255,255,.9);
-  border: 1px solid var(--border);
+  background: rgba(255,255,255,.54);
+  border: 1px solid rgba(255,255,255,.44);
   border-radius: 100px;
-  padding: 7px 16px 7px 12px;
+  padding: 8px 16px 8px 12px;
   font-size: 0.78rem;
   font-weight: 600;
-  color: var(--muted);
+  color: rgba(64,79,120,.8);
   transition: all 0.32s;
-  backdrop-filter: blur(12px);
-  box-shadow: var(--shadow-sm);
-  z-index: 2;
+  backdrop-filter: blur(14px);
+  box-shadow:
+    0 10px 22px rgba(15,23,42,.06),
+    inset 0 1px 0 rgba(255,255,255,.48);
+  z-index: 4;
 }
 
 .avatar-live-badge.recording {
-  background: linear-gradient(135deg, #fff8f8 0%, #fff0f2 100%);
-  border-color: rgba(244,54,90,.28);
+  background: linear-gradient(135deg, rgba(255,248,248,.8) 0%, rgba(255,240,242,.74) 100%);
+  border-color: rgba(244,54,90,.22);
   color: var(--rose);
-  box-shadow: 0 0 0 5px rgba(244,54,90,.07), var(--shadow-sm);
+  box-shadow:
+    0 0 0 5px rgba(244,54,90,.05),
+    0 12px 24px rgba(15,23,42,.06),
+    inset 0 1px 0 rgba(255,255,255,.48);
 }
 
 .eq {
@@ -1223,41 +1228,75 @@ body { position: relative; overflow-x: hidden; }
 
 .avatar-corner-tag {
   position: absolute;
-  top: 10px;
+  top: 18px;
   left: 50%;
-  transform: translateX(calc(-50% + 170px));
+  transform: translateX(calc(-50% + 162px));
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--muted);
-  background: rgba(255,255,255,.75);
-  border: 1px solid var(--border);
-  padding: 5px 13px;
+  color: rgba(64,79,120,.8);
+  background: rgba(255,255,255,.52);
+  border: 1px solid rgba(255,255,255,.42);
+  padding: 7px 14px;
   border-radius: 100px;
-  z-index: 2;
-  backdrop-filter: blur(8px);
+  z-index: 4;
+  backdrop-filter: blur(14px);
+  box-shadow:
+    0 10px 22px rgba(15,23,42,.06),
+    inset 0 1px 0 rgba(255,255,255,.48);
 }
 
 /* Stage with glow */
 .avatar-stage {
   position: relative;
-  width: 540px;
-  height: 620px;
+  width: 560px;
+  height: 700px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
+.avatar-stage::before {
+  content: '';
+  position: absolute;
+  inset: 14px 26px 36px;
+  border-radius: 40px;
+  background: linear-gradient(180deg, rgba(255,255,255,.5), rgba(255,255,255,.18));
+  border: 1px solid rgba(255,255,255,.46);
+  box-shadow:
+    0 32px 80px rgba(15,23,42,.08),
+    0 14px 30px rgba(61,90,254,.08),
+    inset 0 1px 0 rgba(255,255,255,.68);
+  backdrop-filter: blur(18px);
+}
+
+.avatar-stage::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  width: 280px;
+  height: 54px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background:
+    radial-gradient(ellipse at center, rgba(255,255,255,.82) 0%, rgba(184,204,235,.38) 46%, rgba(184,204,235,0) 76%);
+  filter: blur(10px);
+  opacity: 0.88;
+}
+
 .avatar-glow {
   position: absolute;
-  inset: -90px;
+  inset: -90px -70px -40px;
   background:
-    radial-gradient(circle at 50% 36%, rgba(61,90,254,.22), transparent 50%),
-    radial-gradient(circle at 50% 72%, rgba(0,196,140,.16), transparent 52%);
-  filter: blur(56px);
+    radial-gradient(circle at 50% 28%, rgba(124,58,237,.2), transparent 34%),
+    radial-gradient(circle at 50% 46%, rgba(61,90,254,.22), transparent 46%),
+    radial-gradient(circle at 50% 76%, rgba(0,196,140,.1), transparent 42%);
+  filter: blur(68px);
   border-radius: 50%;
   animation: glowPulse 4.5s ease-in-out infinite;
+  z-index: 0;
 }
 
 @keyframes glowPulse {
@@ -1267,16 +1306,50 @@ body { position: relative; overflow-x: hidden; }
 
 .avatar-frame {
   position: relative;
-  width: 520px;
-  height: 600px;
-  border-radius: 34px;
+  width: 470px;
+  height: 620px;
+  transform: translateY(-12px);
+  border-radius: 36px;
   overflow: hidden;
-  background: linear-gradient(180deg, rgba(220,230,244,.28), rgba(164,189,214,.14));
+  background:
+    radial-gradient(circle at 50% 14%, rgba(255,255,255,.72), rgba(255,255,255,0) 26%),
+    radial-gradient(circle at 50% 38%, rgba(147,173,233,.32), rgba(147,173,233,0) 42%),
+    linear-gradient(180deg, rgba(235,241,252,.95) 0%, rgba(203,219,244,.88) 52%, rgba(190,206,236,.82) 100%);
+  border: 1px solid rgba(255,255,255,.54);
   box-shadow:
-    0 0 0 1px rgba(61,90,254,.08),
-    0 22px 60px rgba(15,23,42,.08),
-    0 42px 90px -36px rgba(61,90,254,.28),
-    inset 0 1px 0 rgba(255,255,255,.34);
+    0 0 0 1px rgba(61,90,254,.05),
+    0 36px 80px rgba(15,23,42,.11),
+    0 26px 52px rgba(61,90,254,.1),
+    inset 0 1px 0 rgba(255,255,255,.72),
+    inset 0 -28px 70px rgba(122,147,205,.14);
+  z-index: 2;
+}
+
+.avatar-frame::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.26), transparent 20%),
+    radial-gradient(circle at 50% 78%, rgba(255,255,255,.34), rgba(255,255,255,0) 34%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.avatar-frame::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  width: 240px;
+  height: 34px;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: radial-gradient(ellipse at center, rgba(120,141,186,.3) 0%, rgba(120,141,186,0) 74%);
+  filter: blur(8px);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .CWASAAvatar {
@@ -1287,6 +1360,9 @@ body { position: relative; overflow-x: hidden; }
   margin: 0;
   border: 0;
   padding: 0;
+  transform: scale(1.07) translateY(-8px);
+  transform-origin: center top;
+  z-index: 2;
 }
 
 .avatar-caption {
@@ -1559,22 +1635,22 @@ body { position: relative; overflow-x: hidden; }
   }
 
   .avatar-live-badge {
-    top: -6px;
+    top: 0;
   }
 
   .avatar-corner-tag {
-    top: 42px;
+    top: 46px;
   }
 
   .avatar-stage {
-    width: 400px;
-    height: 468px;
+    width: 436px;
+    height: 560px;
   }
 
   .avatar-frame {
-    width: 390px;
-    height: 448px;
-    border-radius: 28px;
+    width: 360px;
+    height: 500px;
+    border-radius: 30px;
   }
 
   .subtitles-area {
@@ -2461,9 +2537,12 @@ body { position: relative; overflow-x: hidden; }
   .subtitles-layout { min-height: calc(100vh - 96px); padding: 10px 16px 264px; }
   .avatar-area { padding: 56px 0 0; min-height: 100%; }
   .avatar-live-badge { top: 0; }
-  .avatar-corner-tag { top: 42px; font-size: 0.62rem; padding: 5px 10px; }
-  .avatar-stage { width: 300px; height: 360px; }
-  .avatar-frame { width: 292px; height: 338px; border-radius: 24px; }
+  .avatar-corner-tag { top: 44px; font-size: 0.62rem; padding: 5px 10px; }
+  .avatar-stage { width: 320px; height: 434px; }
+  .avatar-stage::before { inset: 10px 10px 24px; border-radius: 30px; }
+  .avatar-stage::after { width: 180px; height: 38px; bottom: 20px; }
+  .avatar-frame { width: 270px; height: 384px; border-radius: 28px; }
+  .CWASAAvatar { transform: scale(1.05) translateY(-6px); }
   .avatar-caption { font-size: 0.9rem; max-width: 340px; padding: 0 12px; }
   .subtitles-area { width: calc(100vw - 24px); bottom: 12px; border-radius: 24px; padding: 18px 18px 16px; }
   .subtitles-header { gap: 10px; margin-bottom: 12px; padding-bottom: 12px; }
