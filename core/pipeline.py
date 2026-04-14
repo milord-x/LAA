@@ -219,6 +219,7 @@ class Pipeline:
             "text": chunk.text,
             "keywords": structured["keywords"],
             "avatar_url": synced.avatar_url,
+            "avatar_sigml": synced.avatar_sigml,
             "avatar_duration_ms": synced.duration_ms,
             "timestamp": chunk.start,
         }

@@ -43,6 +43,12 @@ async def index() -> FileResponse:
     return FileResponse(str(frontend_dir / "index.html"))
 
 
+@app.get("/cwaclientcfg.json")
+async def cwasa_config() -> FileResponse:
+    """CWASA looks for this file at the page root."""
+    return FileResponse(str(frontend_dir / "cwaclientcfg.json"), media_type="application/json")
+
+
 @app.get("/health")
 async def health() -> dict:
     return {"status": "ok"}

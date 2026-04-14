@@ -7,8 +7,40 @@ const statusDot   = document.getElementById("statusDot");
 const statusMsg   = document.getElementById("statusMsg");
 const subtitleBox = document.getElementById("subtitleBox");
 const keywordsEl  = document.getElementById("keywords");
-const avatarImg   = document.getElementById("avatarImg");
 const avatarLabel = document.getElementById("avatarLabel");
+
+// ── CWASA avatar ─────────────────────────────────────────────────────────────
+
+let cwasaReady = false;
+let sigmlQueue = [];
+
+// CWASA calls this hook when the avatar is fully initialized
+if (typeof CWASA !== "undefined") {
+  CWASA.addHook("avatarready", () => {
+    cwasaReady = true;
+    console.log("[CWASA] avatar ready");
+    // Drain any queued SiGML
+    while (sigmlQueue.length > 0) {
+      const s = sigmlQueue.shift();
+      try { CWASA.playSiGMLText(s, 0); } catch (_) {}
+    }
+  });
+}
+
+function playSign(sigml) {
+  if (!sigml) return;
+  try {
+    if (cwasaReady) {
+      CWASA.playSiGMLText(sigml, 0);
+    } else {
+      // Buffer up to 3 pending signs; drop oldest if overflowing
+      sigmlQueue.push(sigml);
+      if (sigmlQueue.length > 3) sigmlQueue.shift();
+    }
+  } catch (e) {
+    console.warn("[CWASA] playSiGMLText failed:", e.message);
+  }
+}
 const summaryPanel = document.getElementById("summaryPanel");
 const summaryText  = document.getElementById("summaryText");
 const micSelect    = document.getElementById("micSelect");
@@ -186,7 +218,7 @@ function setStatus(msg) {
   statusMsg.textContent = msg;
 }
 
-function appendSubtitle({ text, keywords, avatar_url }) {
+function appendSubtitle({ text, keywords, avatar_sigml }) {
   const div = document.createElement("div");
   div.className = "subtitle-chunk";
   div.textContent = text;
@@ -194,9 +226,9 @@ function appendSubtitle({ text, keywords, avatar_url }) {
   subtitleBox.scrollTop = subtitleBox.scrollHeight;
 
   if (keywords?.length) renderKeywords(keywords);
-  if (avatar_url) {
-    avatarImg.src = avatar_url + "?t=" + Date.now();
+  if (avatar_sigml) {
     avatarLabel.textContent = text.slice(0, 60);
+    playSign(avatar_sigml);
   }
 }
 

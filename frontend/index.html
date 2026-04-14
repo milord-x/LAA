@@ -5,8 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LAA — Lecture Access Agent</title>
   <link rel="stylesheet" href="/static/style.css" />
+  <link rel="stylesheet" href="/static/cwasa.css" />
 </head>
-<body>
+<body onload="CWASA.init();">
   <div class="app">
     <header class="header">
       <h1>LAA <span class="tag">Lecture Access Agent</span></h1>
@@ -27,7 +28,8 @@
 
     <main class="main">
       <section class="panel panel-avatar">
-        <img id="avatarImg" src="/static/avatar_placeholder.gif" alt="Sign language avatar" />
+        <!-- CWASA avatar container — rendered by allcsa.js -->
+        <div class="CWASAAvatar av0" id="cwasaPanel"></div>
         <p id="avatarLabel" class="avatar-label"></p>
       </section>
 
@@ -44,6 +46,7 @@
     </footer>
   </div>
 
+  <script src="/static/allcsa.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

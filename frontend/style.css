@@ -81,7 +81,7 @@ body {
 
 .main {
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 280px 1fr;
   gap: 20px;
 }
 
@@ -102,11 +102,12 @@ body {
   gap: 14px;
 }
 
-.panel-avatar img {
-  width: 200px;
-  height: 200px;
-  object-fit: contain;
+/* CWASA avatar container */
+#cwasaPanel {
+  width: 240px;
+  height: 260px;
   border-radius: 10px;
+  overflow: hidden;
   background: #0f1117;
 }
 

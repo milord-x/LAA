@@ -1,0 +1,13 @@
+{
+  "description": "LAA CWASA avatar configuration",
+  "avSettings": [
+    {
+      "width": 240,
+      "height": 260,
+      "avList": "avs",
+      "initAv": "marc",
+      "allowFrameSteps": false,
+      "allowSiGMLText": true
+    }
+  ]
+}

@@ -7,6 +7,7 @@ from avatar.synthesis import AvatarFrame, avatar_engine
 class SyncedFrame:
     text: str
     avatar_url: str
+    avatar_sigml: str | None
     duration_ms: int
     timestamp: float
 
@@ -17,6 +18,7 @@ def sync_chunk(text: str, timestamp: float) -> SyncedFrame:
     return SyncedFrame(
         text=text,
         avatar_url=frame.url,
+        avatar_sigml=frame.sigml,
         duration_ms=frame.duration_ms,
         timestamp=timestamp,
     )
