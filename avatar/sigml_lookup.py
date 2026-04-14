@@ -549,6 +549,39 @@ _RU_TO_EN: dict[str, str] = {
     "история": "education", "география": "area", "биология": "science",
     "компьютер": "computer", "телефон": "phone", "интернет": "internet",
     "доктор": "doctor", "больница": "clinic", "лекарство": "medicine",
+    # Животные и природа
+    "собака": "dog", "кошка": "cat", "птица": "bird", "дерево": "tree",
+    "парк": "park", "лес": "forest", "река": "water", "море": "water",
+    "трава": "green", "цветок": "flower", "небо": "blue", "солнце": "light",
+    # Действия (бытовые)
+    "гулять": "go", "выгуливал": "go", "бежать": "run", "бегать": "run",
+    "прыгать": "jump", "плавать": "swim", "играть": "play",
+    "готовить": "cook", "убирать": "clean", "мыть": "wash",
+    "купить": "buy", "продать": "sell", "платить": "pay",
+    "ехать": "go", "лететь": "fly", "плыть": "swim",
+    "стоять": "stay", "сидеть": "sit", "лежать": "sleep",
+    "смотреть": "see", "слушать": "hear", "чувствовать": "feel",
+    "любить": "love", "ненавидеть": "hate", "бояться": "fear",
+    "помогать": "help", "мешать": "avoid", "ждать": "wait",
+    "встречать": "meet", "провожать": "send", "звать": "call",
+    # Местоимения и связки
+    "свою": "me", "свой": "me", "своё": "me", "своя": "me",
+    "мой": "me", "моя": "me", "моё": "me", "мои": "me",
+    "твой": "you", "твоя": "you", "наш": "we", "наша": "we",
+    "тот": "that", "эта": "this", "эти": "this", "эту": "this",
+    "всё": "all", "все": "all", "каждый": "every", "каждая": "every",
+    "очень": "more", "много": "many", "мало": "few", "немного": "few",
+    "уже": "now", "ещё": "more", "тоже": "also", "только": "alone",
+    "потому": "why", "поэтому": "why", "хотя": "but", "если": "or",
+    # Описания
+    "красивый": "beautiful", "красивая": "beautiful",
+    "интересный": "interesting", "интересная": "interesting",
+    "важный": "important", "важная": "important",
+    "новый": "new", "новая": "new", "старый": "old", "старая": "old",
+    "молодой": "young", "высокий": "tall", "низкий": "short",
+    "длинный": "long", "короткий": "short", "широкий": "big",
+    "горячий": "hot", "холодный": "cold", "тёплый": "warm",
+    "громкий": "loud", "тихий": "quiet", "быстрый": "quick",
     # Казахский базовый
     "сәлем": "hello", "жақсы": "good", "иә": "yes", "жоқ": "no",
     "рақмет": "thank", "кешіріңіз": "sorry", "өтінеміз": "please",
@@ -562,48 +595,55 @@ _RU_TO_EN: dict[str, str] = {
 }
 
 
-def text_to_sigml(text: str) -> str:
-    """
-    Convert text segment to SiGML.
-    1. Try direct EN keyword match
-    2. Try RU/KZ→EN translation via built-in dict
-    3. Try argostranslate if available
-    4. Fall back to deterministic pool selection
-    """
-    words = text.lower().split()
-    signs: list[str] = []
+_MAX_SIGNS = 3  # max signs per segment to stay in sync with speech
 
+
+def _lookup_words(words: list[str]) -> list[str]:
+    signs = []
     for word in words:
         clean = word.strip(".,!?;:\"'()-…")
-        # Direct match
         entry = _SIGN_MAP.get(clean)
         if entry and entry.startswith("<hns_sign"):
             signs.append(entry)
             continue
-        # RU/KZ → EN translation
         en_word = _RU_TO_EN.get(clean)
         if en_word:
             entry = _SIGN_MAP.get(en_word)
             if entry and entry.startswith("<hns_sign"):
                 signs.append(entry)
+    return signs
 
-    # If nothing matched, try argostranslate on full text
-    if not signs:
+
+def text_to_sigml(text: str) -> str:
+    """
+    Convert text segment to SiGML (max 3 signs to stay in sync with speech).
+    1. Direct EN match + RU/KZ dict
+    2. argostranslate for remaining unknown words
+    3. Deterministic pool fallback
+    """
+    words = text.lower().split()
+    signs = _lookup_words(words)
+
+    # Try argostranslate on full text to catch words not in _RU_TO_EN
+    if len(signs) < _MAX_SIGNS:
         try:
             from avatar.translator import translate_to_en
             en_text = translate_to_en(text)
-            if en_text != text:
-                for word in en_text.lower().split():
-                    clean = word.strip(".,!?;:\"'()-…")
-                    entry = _SIGN_MAP.get(clean)
-                    if entry and entry.startswith("<hns_sign"):
-                        signs.append(entry)
+            if en_text.lower() != text.lower():
+                en_signs = _lookup_words(en_text.lower().split())
+                # merge: prefer argostranslate results, deduplicate by gloss
+                existing = {s.split('gloss="')[1].split('"')[0] for s in signs}
+                for s in en_signs:
+                    gloss = s.split('gloss="')[1].split('"')[0]
+                    if gloss not in existing:
+                        signs.append(s)
+                        existing.add(gloss)
         except Exception:
             pass
 
-    # Final fallback: deterministic from pool
+    # Fallback if still empty
     if not signs:
         idx = int(hashlib.md5(text.encode()).hexdigest(), 16) % len(_POOL)
         signs.append(_SIGN_MAP[_POOL[idx]])
 
-    return f'<sigml>{"".join(signs)}</sigml>'
+    return f'<sigml>{"".join(signs[:_MAX_SIGNS])}</sigml>'

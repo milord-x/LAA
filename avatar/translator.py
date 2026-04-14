@@ -8,86 +8,73 @@ import threading
 from typing import Optional
 
 _lock = threading.Lock()
-_loaded: dict[str, object] = {}  # lang_pair -> translate function
+_loaded: dict[str, object] = {}
 
 
 def _load_pair(src: str, tgt: str = "en") -> Optional[object]:
-    """Load argostranslate package for src->tgt. Downloads if not cached."""
     key = f"{src}-{tgt}"
     if key in _loaded:
         return _loaded[key]
     try:
-        from argostranslate import package, translate
-        package.update_package_index()
-        available = package.get_available_packages()
-        pkg = next(
-            (p for p in available if p.from_code == src and p.to_code == tgt),
-            None,
-        )
-        if pkg is None:
-            print(f"[Translator] No package found for {src}->{tgt}")
-            return None
-        installed = translate.get_installed_languages()
-        already = any(
-            l.code == src and any(t.language.code == tgt for t in l.translations_from)
-            for l in installed
-        )
-        if not already:
-            print(f"[Translator] Downloading {src}->{tgt} package (~50MB)...")
+        from argostranslate import translate
+
+        langs = translate.get_installed_languages()
+        src_lang = next((l for l in langs if l.code == src), None)
+        tgt_lang = next((l for l in langs if l.code == tgt), None)
+
+        if src_lang is None or tgt_lang is None:
+            from argostranslate import package
+            package.update_package_index()
+            available = package.get_available_packages()
+            pkg = next(
+                (p for p in available if p.from_code == src and p.to_code == tgt),
+                None,
+            )
+            if pkg is None:
+                print(f"[Translator] No package for {src}->{tgt}")
+                return None
+            print(f"[Translator] Downloading {src}->{tgt}...")
             pkg.install()
-            print(f"[Translator] {src}->{tgt} installed.")
-            installed = translate.get_installed_languages()
-        src_lang = next((l for l in installed if l.code == src), None)
-        if src_lang is None:
+            langs = translate.get_installed_languages()
+            src_lang = next((l for l in langs if l.code == src), None)
+            tgt_lang = next((l for l in langs if l.code == tgt), None)
+
+        if src_lang is None or tgt_lang is None:
             return None
-        translation = src_lang.get_translation(
-            next(l for l in installed if l.code == tgt)
-        )
+
+        translation = src_lang.get_translation(tgt_lang)
         _loaded[key] = translation
         return translation
     except Exception as e:
-        print(f"[Translator] Failed to load {src}->{tgt}: {e}")
+        print(f"[Translator] Failed {src}->{tgt}: {e}")
         return None
 
 
 def _detect_lang(text: str) -> str:
-    """Simple heuristic: Kazakh has specific chars, else assume RU."""
     kaz_chars = set("әіңғүұқөһ")
     if any(c in kaz_chars for c in text.lower()):
         return "kz"
-    # Check for Cyrillic — assume RU
     if any("\u0400" <= c <= "\u04ff" for c in text):
         return "ru"
     return "en"
 
 
 def translate_to_en(text: str) -> str:
-    """
-    Translate text to English for sign lookup.
-    Returns original text if translation unavailable or already EN.
-    """
     lang = _detect_lang(text)
     if lang == "en":
         return text
-
-    # argostranslate uses "kz" but package may be under different code
-    src = "ru" if lang == "kz" else lang
-
+    src = "ru"  # argostranslate uses ru for both ru and kz fallback
     with _lock:
         translator = _load_pair(src, "en")
-
     if translator is None:
         return text
-
     try:
-        result = translator.translate(text)
-        return result
+        return translator.translate(text)
     except Exception as e:
-        print(f"[Translator] translate failed: {e}")
+        print(f"[Translator] translate error: {e}")
         return text
 
 
 def preload_async():
-    """Preload RU->EN in background so first segment isn't slow."""
     t = threading.Thread(target=lambda: _load_pair("ru", "en"), daemon=True)
     t.start()
