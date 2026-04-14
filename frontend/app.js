@@ -304,3 +304,8 @@ btnStop.addEventListener("click", stopSession);
 
 // Request mic permission immediately so list shows real labels from the start
 initMicList();
+
+// Init CWASA after page is interactive (non-blocking)
+if (typeof CWASA !== "undefined") {
+  CWASA.init();
+}
