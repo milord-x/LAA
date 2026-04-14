@@ -416,6 +416,65 @@ function stopLiveUpdate() {
 }
 
 // ══════════════════════════════════════════════════════════════════════════
+// AMBIENT BACKGROUND
+// ══════════════════════════════════════════════════════════════════════════
+
+function initAmbientMotion() {
+  const root = document.documentElement;
+  const bg = document.querySelector(".bg-ambient");
+  if (!bg || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  let rafId = 0;
+  let targetX = 0;
+  let targetY = 0;
+  let currentX = 0;
+  let currentY = 0;
+
+  const setShiftVars = (x, y) => {
+    root.style.setProperty("--bg-shift-x", `${x}px`);
+    root.style.setProperty("--bg-shift-y", `${y}px`);
+    root.style.setProperty("--bg-shift-x-soft", `${(x * 0.6).toFixed(2)}px`);
+    root.style.setProperty("--bg-shift-y-soft", `${(y * 0.6).toFixed(2)}px`);
+    root.style.setProperty("--bg-shift-x-invert", `${(-x * 0.72).toFixed(2)}px`);
+    root.style.setProperty("--bg-shift-y-invert", `${(-y * 0.72).toFixed(2)}px`);
+    root.style.setProperty("--bg-shift-x-tiny", `${(x * 0.22).toFixed(2)}px`);
+    root.style.setProperty("--bg-shift-y-tiny", `${(y * 0.22).toFixed(2)}px`);
+    root.style.setProperty("--bg-shift-x-tiny-invert", `${(-x * 0.18).toFixed(2)}px`);
+    root.style.setProperty("--bg-shift-y-tiny-invert", `${(-y * 0.18).toFixed(2)}px`);
+  };
+
+  const tick = () => {
+    currentX += (targetX - currentX) * 0.08;
+    currentY += (targetY - currentY) * 0.08;
+    setShiftVars(currentX, currentY);
+
+    if (Math.abs(targetX - currentX) > 0.02 || Math.abs(targetY - currentY) > 0.02) {
+      rafId = requestAnimationFrame(tick);
+    } else {
+      rafId = 0;
+    }
+  };
+
+  const queueTick = () => {
+    if (!rafId) rafId = requestAnimationFrame(tick);
+  };
+
+  window.addEventListener("pointermove", (event) => {
+    const xRatio = event.clientX / window.innerWidth - 0.5;
+    const yRatio = event.clientY / window.innerHeight - 0.5;
+    targetX = Number((xRatio * 10).toFixed(2));
+    targetY = Number((yRatio * 8).toFixed(2));
+    queueTick();
+  }, { passive: true });
+
+  window.addEventListener("pointerleave", () => {
+    targetX = 0;
+    targetY = 0;
+    queueTick();
+  }, { passive: true });
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 // LANGUAGE SWITCHER
 // ══════════════════════════════════════════════════════════════════════════
 
@@ -461,6 +520,7 @@ fetch(`${API}/session/mode`)
 // INIT
 // ══════════════════════════════════════════════════════════════════════════
 
+initAmbientMotion();
 initMicList();
 
 if (typeof CWASA !== "undefined") {
