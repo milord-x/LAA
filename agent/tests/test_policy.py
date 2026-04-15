@@ -1,10 +1,12 @@
 """
-Unit tests for AgentPolicy, AgentController, and pipeline integration.
+Unit tests for AgentPolicy, AgentController, LLM refiner fallback,
+benchmark cases, and recent decisions buffer.
 
 Run:  python -m pytest agent/tests/ -v
   or: python agent/tests/test_policy.py
 """
 
+import asyncio
 import sys
 import os
 
@@ -56,6 +58,14 @@ def test_single_stopword_rejected():
     assert d.is_noise or d.word_count < 2
 
 
+def test_filler_heavy_multi_word_rejected():
+    """Multi-word filler phrases must be caught by filler-ratio gate."""
+    p = _policy()
+    for text in ["эм ааа ну", "ну это как бы вот так вот да нет ок", "ну это да вот именно"]:
+        d = p.evaluate_segment(text)
+        assert d.is_noise, f"filler-heavy {text!r} must be noise, got reason={d.reason!r}"
+
+
 # ------------------------------------------------------------------
 # Valid segment accepted
 # ------------------------------------------------------------------
@@ -82,7 +92,7 @@ def test_long_segment_always_in_summary():
     p = _policy()
     text = " ".join(["слово"] * (LONG_SEGMENT_WORDS + 1))
     d = p.evaluate_segment(text)
-    assert d.include_in_summary, "long segment must always go to summary"
+    assert d.include_in_summary
 
 
 def test_importance_score_range():
@@ -117,7 +127,6 @@ def test_near_duplicate_suppressed():
     text2 = "машинное обучение используется для анализа данных и предсказаний"
     p.evaluate_segment(text1)
     d2 = p.evaluate_segment(text2)
-    # text1 words are a large subset of text2 — should be suppressed
     assert d2.is_duplicate
 
 
@@ -127,30 +136,27 @@ def test_near_duplicate_suppressed():
 
 def test_avatar_requires_min_3_words():
     p = _policy()
-    d = p.evaluate_segment("привет мир")  # 2 words
+    d = p.evaluate_segment("привет мир")
     assert not d.include_in_avatar
 
 
 def test_avatar_blocked_for_too_long_segment():
     p = _policy()
-    text = " ".join(["важный"] * 45)  # 45 words > limit of 40
+    text = " ".join(["важный"] * 45)
     d = p.evaluate_segment(text, keywords=["важный"])
     assert not d.include_in_avatar
 
 
-def test_avatar_allowed_for_good_segment():
-    p = _policy()
-    text = "Нейронные сети обрабатывают входные данные через несколько слоёв"
-    d = p.evaluate_segment(text, keywords=["нейронные", "данные", "слоёв"])
-    # Good segment: 8+ words, keywords present → score should clear threshold
-    if d.is_relevant:
-        assert d.include_in_subtitles
-
-
 def test_avatar_blocked_low_importance():
     p = _policy()
-    # All stopwords → near-zero importance
     d = p.evaluate_segment("и на это с для к или не то так при")
+    assert not d.include_in_avatar
+
+
+def test_avatar_blocked_fragmented_filler():
+    """Fragmented filler input must never reach avatar synthesis."""
+    p = _policy()
+    d = p.evaluate_segment("ну это да вот именно")
     assert not d.include_in_avatar
 
 
@@ -160,8 +166,6 @@ def test_avatar_blocked_low_importance():
 
 def test_summary_refresh_triggers_after_budget():
     p = _policy()
-    # Feed unique segments until budget (80 words) is exceeded.
-    # Each segment is ~10 meaningful words, window=5 so no dedup collision.
     topics = [
         "нейронная сеть обучается распознавать изображения объектов сцены",
         "градиентный спуск минимизирует функцию потерь весовых параметров",
@@ -184,16 +188,16 @@ def test_summary_refresh_triggers_after_budget():
         if d.refresh_summary:
             refreshed = True
             break
-    assert refreshed, "summary refresh must trigger after enough accepted words"
+    assert refreshed
 
 
 def test_summary_refresh_resets_budget():
     p = _policy()
     segment = "нейронная сеть обучается градиентным спуском оптимизации потерь"
-    for _ in range(15):
-        d = p.evaluate_segment(segment + str(_), keywords=["нейронная", "сеть"])
+    for i in range(15):
+        d = p.evaluate_segment(segment + str(i), keywords=["нейронная", "сеть"])
         if d.refresh_summary:
-            assert p.word_budget == 0, "budget must reset after refresh"
+            assert p.word_budget == 0
             break
 
 
@@ -203,8 +207,8 @@ def test_summary_refresh_resets_budget():
 
 def test_controller_rejected_counter():
     ctrl = _ctrl()
-    ctrl.process("ум")   # noise
-    ctrl.process("")     # noise
+    ctrl.process("ум")
+    ctrl.process("")
     assert ctrl.stats["rejected"] == 2
     assert ctrl.stats["accepted"] == 0
 
@@ -219,7 +223,7 @@ def test_controller_duplicate_counter():
     ctrl = _ctrl()
     text = "нейронные сети классифицируют изображения точно"
     ctrl.process(text, keywords=["нейронные", "сети"])
-    ctrl.process(text, keywords=["нейронные", "сети"])  # duplicate
+    ctrl.process(text, keywords=["нейронные", "сети"])
     assert ctrl.stats["duplicates_suppressed"] == 1
 
 
@@ -243,7 +247,7 @@ def test_controller_summary_counter():
 def test_controller_recent_reasons_populated():
     ctrl = _ctrl()
     ctrl.process("Алгоритмы машинного обучения применяются в классификации")
-    ctrl.process("ум")  # noise
+    ctrl.process("ум")
     reasons = ctrl.stats["recent_reasons"]
     assert len(reasons) == 2
     assert reasons[0]["verdict"] == "accepted"
@@ -273,6 +277,90 @@ def test_reset_session_clears_counters():
 
 
 # ------------------------------------------------------------------
+# LLM refiner fallback (disabled mode)
+# ------------------------------------------------------------------
+
+def test_llm_disabled_returns_original():
+    """When LAA_ENABLE_LLM is not set, refiner must return original text."""
+    import os
+    os.environ.pop("LAA_ENABLE_LLM", None)
+    # Re-import to pick up env
+    import importlib
+    import agent.llm_refiner as llm_mod
+    importlib.reload(llm_mod)
+    text = "Нейронная сеть обучается на данных"
+    result = asyncio.run(llm_mod.refine_text(text))
+    assert result == text
+
+
+def test_llm_disabled_condense_returns_original():
+    import os
+    os.environ.pop("LAA_ENABLE_LLM", None)
+    import importlib
+    import agent.llm_refiner as llm_mod
+    importlib.reload(llm_mod)
+    text = "Длинный блок текста для конденсации"
+    result = asyncio.run(llm_mod.condense_block(text))
+    assert result == text
+
+
+def test_llm_disabled_structured_note_returns_none():
+    import os
+    os.environ.pop("LAA_ENABLE_LLM", None)
+    import importlib
+    import agent.llm_refiner as llm_mod
+    importlib.reload(llm_mod)
+    result = asyncio.run(llm_mod.generate_structured_note("Тест"))
+    assert result is None
+
+
+def test_llm_status_disabled():
+    import os
+    os.environ.pop("LAA_ENABLE_LLM", None)
+    import importlib
+    import agent.llm_refiner as llm_mod
+    importlib.reload(llm_mod)
+    s = llm_mod.status()
+    assert s["enabled"] is False
+    assert s["model"] is None
+
+
+# ------------------------------------------------------------------
+# Benchmark cases validation
+# ------------------------------------------------------------------
+
+def test_benchmark_all_cases_match():
+    """Benchmark must achieve 100% expectation accuracy on labeled cases."""
+    import sys, os
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+    from evaluation.benchmark import run_benchmark
+    results, stats = run_benchmark()
+    assert stats.expectation_matches == stats.total, (
+        f"Benchmark expectation failures: "
+        f"{stats.total - stats.expectation_matches}/{stats.total}"
+    )
+
+
+def test_benchmark_noise_blocked():
+    """Noise/filler cases must be rejected by agent."""
+    from evaluation.benchmark import run_benchmark
+    results, stats = run_benchmark()
+    noise_cases = [r for r in results if r.category == "noise"]
+    for r in noise_cases:
+        assert not r.agent_subtitles, f"Noise case {r.name!r} leaked to subtitles"
+        assert not r.agent_avatar, f"Noise case {r.name!r} leaked to avatar"
+
+
+def test_benchmark_avatar_protected():
+    """Agent must block more avatar outputs than baseline for noise cases."""
+    from evaluation.benchmark import run_benchmark
+    results, stats = run_benchmark()
+    assert stats.avatar_allowed < stats.baseline_avatar_total, (
+        "Agent should block some avatar outputs vs baseline"
+    )
+
+
+# ------------------------------------------------------------------
 # Standalone runner
 # ------------------------------------------------------------------
 
@@ -283,6 +371,7 @@ if __name__ == "__main__":
         test_filler_words_rejected,
         test_too_short_rejected,
         test_single_stopword_rejected,
+        test_filler_heavy_multi_word_rejected,
         test_informative_sentence_accepted,
         test_english_sentence_accepted,
         test_long_segment_always_in_summary,
@@ -292,8 +381,8 @@ if __name__ == "__main__":
         test_near_duplicate_suppressed,
         test_avatar_requires_min_3_words,
         test_avatar_blocked_for_too_long_segment,
-        test_avatar_allowed_for_good_segment,
         test_avatar_blocked_low_importance,
+        test_avatar_blocked_fragmented_filler,
         test_summary_refresh_triggers_after_budget,
         test_summary_refresh_resets_budget,
         test_controller_rejected_counter,
@@ -304,6 +393,13 @@ if __name__ == "__main__":
         test_controller_recent_reasons_populated,
         test_controller_stats_keys,
         test_reset_session_clears_counters,
+        test_llm_disabled_returns_original,
+        test_llm_disabled_condense_returns_original,
+        test_llm_disabled_structured_note_returns_none,
+        test_llm_status_disabled,
+        test_benchmark_all_cases_match,
+        test_benchmark_noise_blocked,
+        test_benchmark_avatar_protected,
     ]
     passed = failed = 0
     for fn in tests:

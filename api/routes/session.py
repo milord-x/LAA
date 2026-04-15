@@ -67,3 +67,21 @@ async def agent_stats() -> dict:
     """Return AgentController runtime statistics (accept/reject counts, word budget)."""
     from agent.controller import agent_controller as _ac
     return _ac.stats
+
+
+@router.get("/agent/recent-decisions")
+async def agent_recent_decisions() -> dict:
+    """
+    Return the last N agent decisions with full routing flags and explainability data.
+
+    Each entry contains:
+      text snippet, verdict, importance score, routing flags, reason, elapsed_ms.
+    Useful for demo observability and debugging.
+    """
+    from agent.controller import agent_controller as _ac
+    from agent.llm_refiner import status as llm_status
+    return {
+        "decisions": list(_ac.stats["recent_reasons"]),
+        "total_in_session": _ac.stats["total"],
+        "llm": llm_status(),
+    }

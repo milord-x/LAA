@@ -104,6 +104,61 @@ Every ASR segment passes through `AgentController.process()` which invokes `Agen
 
 ---
 
+## Optional LLM Refinement
+
+LLM enhancement is available but **not required** — the agent works fully offline without it.
+
+When `LAA_ENABLE_LLM=true` is set, `agent/llm_refiner.py` activates an optional post-routing stage:
+
+- Rewrites raw ASR output into clean accessible text
+- Condenses long speech blocks (>20 words) into 1-2 sentences
+- Generates structured bullet-point notes from topic-ending segments
+
+Any OpenAI-compatible API works (OpenAI, local llama.cpp, Ollama):
+
+```env
+LAA_ENABLE_LLM=true
+LAA_LLM_PROVIDER=openai_compatible
+LAA_LLM_MODEL=gpt-4o-mini
+LAA_LLM_BASE_URL=https://api.openai.com/v1
+LAA_LLM_API_KEY=sk-...
+LAA_LLM_TIMEOUT=5.0
+```
+
+If LLM times out or fails, the original agent-routed text passes through unchanged.
+
+**Hybrid architecture:**
+```
+rule-based policy core  →  optional LLM enhancement layer  →  outputs
+```
+
+---
+
+## Evaluation
+
+Benchmark results on 8 labeled test cases (`python evaluation/benchmark.py`):
+
+| Metric | Baseline | Agent |
+|--------|----------|-------|
+| Segments to subtitles | 8/8 | 4/8 |
+| Segments to avatar | 8/8 | 4/8 |
+| Segments to summary | 8/8 | 4/8 |
+| Noise/filler blocked | 0 | 3 |
+| Duplicates suppressed | 0 | 1 |
+| Expectation accuracy | — | 8/8 (100%) |
+
+Full report: [`docs/evaluation_report.md`](docs/evaluation_report.md)
+
+---
+
+## Baseline vs Agent
+
+Concrete side-by-side comparison of 8 cases showing what baseline (naive pass-through) does vs what the agent decides, and why the agent result is better for hearing-impaired users.
+
+See [`docs/baseline_vs_agent.md`](docs/baseline_vs_agent.md)
+
+---
+
 ## Stack
 
 | Component | Technology |
@@ -116,6 +171,7 @@ Every ASR segment passes through `AgentController.process()` which invokes `Agen
 | Backend | FastAPI + WebSockets |
 | Summary | Extractive TF-based summarizer (offline) |
 | Agent | Custom rule-based policy engine with explainable decisions |
+| LLM (optional) | Any OpenAI-compatible API via httpx |
 
 ---
 
@@ -128,7 +184,8 @@ Every ASR segment passes through `AgentController.process()` which invokes `Agen
 | `POST /session/stop` | Stop session |
 | `POST /session/mode/{mode}` | Switch ASR language: auto / ru / en / kz |
 | `GET /session/status` | Active session info |
-| `GET /session/agent/stats` | Agent decision statistics |
+| `GET /session/agent/stats` | Full agent statistics (accept/reject/avatar/summary/refresh counts) |
+| `GET /session/agent/recent-decisions` | Last 20 agent decisions with routing flags and reasons |
 | `GET /summary/{session_id}` | Full session summary |
 | `GET /summary/current/live` | Live transcript |
 

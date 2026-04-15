@@ -62,8 +62,17 @@ _STOPWORDS: set[str] = {
 _FILLER_EXACT: set[str] = {
     "да", "нет", "ок", "окей", "хорошо", "ладно", "понятно",
     "yes", "no", "ok", "okay", "hmm", "uh", "um", "ah", "eh",
-    "угу", "ага", "эм", "эээ", "ну",
+    "угу", "ага", "эм", "эээ", "ну", "ааа", "ммм",
 }
+
+# Words that count as filler when checking filler-ratio of a sentence
+_FILLER_WORDS: set[str] = _FILLER_EXACT | {
+    "это", "вот", "как", "бы", "так", "вот", "именно", "ну",
+    "типа", "короче", "значит", "ладно", "слушай", "слушайте",
+}
+
+# Filler ratio threshold: if ≥ 80% of words are filler/stopwords → reject
+_FILLER_RATIO_THRESHOLD = 0.80
 
 _FILLER_PATTERNS: list[re.Pattern] = [
     re.compile(r"^[эа-я]{1,3}[\.…,]*$", re.I),   # "эм", "ааа", "ну"
@@ -127,6 +136,12 @@ class AgentPolicy:
             decision.is_noise = True
             decision.reason = "filler word / non-speech artefact"
             decision.reasons = ["FILLER_WORD"]
+            return decision
+
+        if self._is_filler_heavy(decision.cleaned_text):
+            decision.is_noise = True
+            decision.reason = "filler-heavy segment (>80% stopwords/fillers)"
+            decision.reasons = ["FILLER_HEAVY"]
             return decision
 
         word_count = self._count_meaningful_words(decision.cleaned_text)
@@ -275,6 +290,18 @@ class AgentPolicy:
             if pattern.fullmatch(lower):
                 return True
         return False
+
+    @staticmethod
+    def _is_filler_heavy(text: str) -> bool:
+        """
+        Return True when the majority of words in *text* are filler/stopwords.
+        Catches multi-word noise like "ну это как бы вот так" or "эм ааа ну".
+        """
+        words = re.findall(r"\b[а-яёА-ЯЁa-zA-Z]+\b", text.lower())
+        if not words:
+            return True
+        filler_count = sum(1 for w in words if w in _FILLER_WORDS or w in _STOPWORDS)
+        return filler_count / len(words) >= _FILLER_RATIO_THRESHOLD
 
     @staticmethod
     def _count_meaningful_words(text: str) -> int:
