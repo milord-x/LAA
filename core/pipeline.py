@@ -1,10 +1,14 @@
 """
-Audio processor: parse frame → resample → VAD → ASR → filter → return subtitle.
+Audio processor: parse frame → resample → VAD → ASR → Agent → outputs.
 
 Wire protocol (8-byte header):
   Bytes 0-3: uint32 BE 0x4C414100 ("LAA\0")
   Bytes 4-7: uint32 LE sample rate
   Bytes 8+:  float32 LE mono PCM
+
+After ASR the segment is handed to AgentController, which applies
+rule-based policy to decide whether and how to route it to
+subtitles, avatar synthesis, and session transcript.
 """
 
 import asyncio
@@ -13,6 +17,7 @@ import time
 
 import numpy as np
 
+from agent.controller import agent_controller
 from asr.whisper_engine import WhisperEngine
 from avatar.sync import sync_chunk, SyncedFrame
 from core.config import config
@@ -158,6 +163,7 @@ class Pipeline:
     def reset_state(self) -> None:
         """Reset inter-session state (call when a new session starts)."""
         self._last_text = ""
+        agent_controller.reset_session()
 
     async def process_bytes(self, raw: bytes) -> dict | None:
         if not self._model_loaded:
@@ -212,19 +218,42 @@ class Pipeline:
             return None
         self._last_text = chunk.text
 
-        session.append_text(chunk.text)
+        # ── Agent decision layer ──────────────────────────────────────────
+        # Enrich text first (keywords used by policy scoring).
         structured = structure_chunk(chunk.text)
-        synced: SyncedFrame = sync_chunk(chunk.text, timestamp=chunk.start)
+        keywords: list[str] = structured["keywords"]
 
-        return {
-            "type": "subtitle",
-            "text": chunk.text,
-            "keywords": structured["keywords"],
-            "avatar_url": synced.avatar_url,
-            "avatar_sigml": synced.avatar_sigml,
-            "avatar_duration_ms": synced.duration_ms,
-            "timestamp": chunk.start,
-        }
+        decision = agent_controller.process(chunk.text, keywords=keywords)
+
+        if not decision.is_relevant:
+            # Agent rejected the segment (noise / filler / duplicate)
+            print(
+                f"[Agent] dropped — {decision.reason!r} | {chunk.text!r}"
+            )
+            return None
+
+        # ── Session transcript ────────────────────────────────────────────
+        if decision.include_in_summary:
+            session.append_text(chunk.text)
+
+        # ── Avatar synthesis ──────────────────────────────────────────────
+        synced: SyncedFrame | None = None
+        if decision.include_in_avatar:
+            synced = sync_chunk(chunk.text, timestamp=chunk.start)
+
+        # ── Build output payload via controller ───────────────────────────
+        payload = agent_controller.build_subtitle_payload(
+            decision=decision,
+            synced_frame=synced,
+            timestamp=chunk.start,
+        )
+        # Attach keywords separately (structurer already ran above)
+        if decision.highlight_keywords:
+            payload["keywords"] = keywords
+        else:
+            payload["keywords"] = []
+
+        return payload
 
 
 pipeline = Pipeline()

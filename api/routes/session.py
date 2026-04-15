@@ -60,3 +60,10 @@ async def session_status() -> dict:
         "session_id": session.id,
         "transcript_chunks": len(session.transcript),
     }
+
+
+@router.get("/agent/stats")
+async def agent_stats() -> dict:
+    """Return AgentController runtime statistics (accept/reject counts, word budget)."""
+    from agent.controller import agent_controller as _ac
+    return _ac.stats
