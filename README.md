@@ -1,14 +1,18 @@
-# LAA — Lecture Accessibility Agent
+# LAA – Lecture Accessibility Agent
 
 An autonomous accessibility agent that transforms live speech into multiple accessible formats for people with hearing impairments.
 
 Built as a competition prototype for **AI Agents Cup**.
 
+<p align="center">
+<img src="IMG_6286.JPG" width="900">
+</p>
+
 ---
 
 ## Problem
 
-People with hearing impairments cannot effectively follow lectures, presentations, and public speech. Existing closed-caption tools produce raw text streams with noise, duplicates, and no structure — not an agent, just a transcription pipe.
+People with hearing impairments cannot effectively follow lectures, presentations, and public speech. Existing closed-caption tools produce raw text streams with noise, duplicates, and no structure – not an agent, just a transcription pipe.
 
 ---
 
@@ -16,10 +20,10 @@ People with hearing impairments cannot effectively follow lectures, presentation
 
 LAA listens to live audio and autonomously decides what to do with each segment:
 
-- **Real-time subtitles** — filtered, deduplicated, shown immediately
-- **Sign language avatar** — cleaned text routed to SiGML synthesis and rendered in the browser via CWASA
-- **Session summary** — extractive summary built from accepted segments, refreshed automatically
-- **Keyword highlights** — important terms annotated on subtitles
+- **Real-time subtitles** – filtered, deduplicated, shown immediately
+- **Sign language avatar** – cleaned text routed to SiGML synthesis and rendered in the browser via CWASA
+- **Session summary** – extractive summary built from accepted segments, refreshed automatically
+- **Keyword highlights** – important terms annotated on subtitles
 
 All routing decisions are made by the **Agent Layer** — not hardcoded rules, not manual configuration.
 
@@ -28,7 +32,7 @@ All routing decisions are made by the **Agent Layer** — not hardcoded rules, n
 ## Architecture
 
 ```
-Browser (mic) → WebSocket /ws/subtitles
+Browser (mic) — WebSocket — ws — subtitles
                     │
                     ▼
              core/pipeline.py
@@ -68,7 +72,7 @@ Browser (mic) → WebSocket /ws/subtitles
 
 The agent package (`agent/`) is the core differentiator.
 
-Every ASR segment passes through `AgentController.process()` which invokes `AgentPolicy` — a rule-based scoring engine that produces an `AgentDecision` dataclass:
+Every ASR segment passes through `AgentController.process()` which invokes `AgentPolicy` – a rule-based scoring engine that produces an `AgentDecision` dataclass:
 
 | Flag | Meaning |
 |---|---|
@@ -85,7 +89,7 @@ Every ASR segment passes through `AgentController.process()` which invokes `Agen
 ### Why this is autonomous
 
 - The agent runs on every segment without operator input
-- Every decision has an explicit `reason` field — explainable, not a black box
+- Every decision has an explicit `reason` field – explainable, not a black box
 - Routing to three independent output channels (subtitles / avatar / summary) is decided per-segment
 - The agent suppresses duplicates across a sliding window of recent segments
 - Summary refresh is triggered autonomously when accumulated word budget exceeds threshold
@@ -106,7 +110,7 @@ Every ASR segment passes through `AgentController.process()` which invokes `Agen
 
 ## Optional LLM Refinement
 
-LLM enhancement is available but **not required** — the agent works fully offline without it.
+LLM enhancement is available but **not required** – the agent works fully offline without it.
 
 When `LAA_ENABLE_LLM=true` is set, `agent/llm_refiner.py` activates an optional post-routing stage:
 
@@ -205,12 +209,12 @@ Open the browser, click **Start Session**, allow microphone, speak.
 
 ---
 
-## AI Agents Cup — evaluation criteria
+## AI Agents Cup – evaluation criteria
 
-**Autonomy** — AgentController makes independent per-segment routing decisions across three output channels with no human-in-the-loop after session start.
+**Autonomy** – AgentController makes independent per-segment routing decisions across three output channels with no human-in-the-loop after session start.
 
-**Technical depth** — multi-stage pipeline: RMS gate → Silero VAD → Whisper ASR → keyword extraction → agent policy scoring → conditional avatar synthesis + conditional session storage. Each stage has a clear, bounded responsibility.
+**Technical depth** – multi-stage pipeline: RMS gate → Silero VAD → Whisper ASR → keyword extraction → agent policy scoring → conditional avatar synthesis + conditional session storage. Each stage has a clear, bounded responsibility.
 
-**Explainability** — every agent decision carries a `reason` string and a `reasons` list of rule traces. The system can explain why any segment was accepted or rejected. Observable via `/session/agent/stats`.
+**Explainability** – every agent decision carries a `reason` string and a `reasons` list of rule traces. The system can explain why any segment was accepted or rejected. Observable via `/session/agent/stats`.
 
-**Practical value** — targets real accessibility needs for hearing-impaired users in lecture environments. Sign language output, live subtitles, and auto-summary work together as a unified accessible interface.
+**Practical value** – targets real accessibility needs for hearing-impaired users in lecture environments. Sign language output, live subtitles, and auto-summary work together as a unified accessible interface.
